@@ -24,7 +24,7 @@ const CONFIG = {
 </script>
 <!-- ============================================================ -->
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -433,75 +433,71 @@ function render() {
   bindMain();
 }
 
+let tokenClient = null;
+let pendingUserInfo = null;
+
+function initTokenClient() {
+  if (!window.google) return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.GOOGLE_CLIENT_ID,
+    scope: SCOPES,
+    callback: async (tokenResponse) => {
+      if (tokenResponse.error) {
+        S.error = 'Auth error: ' + tokenResponse.error;
+        render();
+        return;
+      }
+      gToken = tokenResponse.access_token;
+
+      // Get user info from Google
+      try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${gToken}` }
+        });
+        const info = await res.json();
+        S.user = { name: info.name, email: info.email, picture: info.picture };
+      } catch(e) {
+        S.user = { name: 'Lab member', email: '', picture: '' };
+      }
+
+      S.view = 'app';
+      S.loading = true;
+      render();
+      loadData().then(data => {
+        S.data = data;
+        S.loading = false;
+        buildSlideRowMap();
+        render();
+      }).catch(e => {
+        S.loading = false;
+        S.error = 'Could not load sheet: ' + e.message;
+        render();
+      });
+    },
+  });
+}
+
 function renderSignin() {
   document.getElementById('app').innerHTML = `
   <div class="setup-wrap">
     <div class="setup-card">
       <h2>SlideTrack</h2>
-      <p>Sign in with your Google account to access the lab slide inventory. Any Google account can view and use slides. Admin actions (adding experiments/batches) require the lab PIN.</p>
-      <div id="g_signin_btn"></div>
+      <p>Sign in with your Google account to access the lab slide inventory. Any Google account can view and use slides. Admin actions require the lab PIN.</p>
+      <button class="btn btn-primary" id="btn-gsignin" style="width:100%;justify-content:center;padding:10px;font-size:15px">Sign in with Google</button>
+      <div id="signin-err"></div>
       <div class="divider"></div>
-      <p style="font-size:12px;color:var(--c-text-3)">This app connects to your lab's Google Sheet. Data is stored directly in the sheet — no other servers involved.</p>
+      <p style="font-size:12px;color:var(--c-text-3)">Data is stored directly in your lab's Google Sheet — no other servers involved.</p>
     </div>
   </div>`;
 
-  // Render Google Sign-In button
-  setTimeout(() => {
-    if (window.google) {
-      google.accounts.id.initialize({
-        client_id: CONFIG.GOOGLE_CLIENT_ID,
-        callback: handleGoogleSignIn,
-      });
-      google.accounts.id.renderButton(document.getElementById('g_signin_btn'), {
-        theme: 'outline', size: 'large', text: 'signin_with', width: 360,
-      });
-    } else {
-      document.getElementById('g_signin_btn').innerHTML = `<div class="err-box">Google Sign-In failed to load. Check your internet connection and that the Client ID is configured.</div>`;
+  document.getElementById('btn-gsignin').addEventListener('click', () => {
+    if (!window.google) {
+      document.getElementById('signin-err').innerHTML = `<div class="err-box" style="margin-top:1rem">Google auth failed to load. Check your internet connection.</div>`;
+      return;
     }
-  }, 500);
-}
-
-function handleGoogleSignIn(response) {
-  // Decode JWT to get user info
-  const payload = JSON.parse(atob(response.credential.split('.')[1]));
-  S.user = { name: payload.name, email: payload.email, picture: payload.picture };
-
-  // Exchange for access token using OAuth implicit flow
-  const params = new URLSearchParams({
-    client_id: CONFIG.GOOGLE_CLIENT_ID,
-    redirect_uri: window.location.origin + window.location.pathname,
-    response_type: 'token',
-    scope: SCOPES,
-    prompt: 'none',
-    login_hint: payload.email,
+    if (!tokenClient) initTokenClient();
+    tokenClient.requestAccessToken();
   });
-  const popup = window.open(`https://accounts.google.com/o/oauth2/v2/auth?${params}`, 'oauth', 'width=500,height=600');
-
-  const check = setInterval(() => {
-    try {
-      if (popup.closed) { clearInterval(check); return; }
-      const hash = popup.location.hash;
-      if (hash && hash.includes('access_token')) {
-        clearInterval(check);
-        popup.close();
-        const tokenParams = new URLSearchParams(hash.slice(1));
-        gToken = tokenParams.get('access_token');
-        S.view = 'app';
-        S.loading = true;
-        render();
-        loadData().then(data => {
-          S.data = data;
-          S.loading = false;
-          buildSlideRowMap();
-          render();
-        }).catch(e => {
-          S.loading = false;
-          S.error = e.message;
-          render();
-        });
-      }
-    } catch(e) { /* cross-origin, still loading */ }
-  }, 300);
 }
 
 function buildSlideRowMap() {
