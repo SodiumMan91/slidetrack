@@ -487,7 +487,18 @@ function renderLogHTML() {
   }).join('')+'</div>';
 }
 
-// ── Modals ────────────────────────────────────────────────────────────────
+// ── Datalist helpers ──────────────────────────────────────────────────────
+function protocolDatalist() {
+  const versions = [...new Set(S.data.slides.map(s=>s.protocolVer).filter(Boolean))].sort();
+  return `<datalist id="proto-list">${versions.map(v=>`<option value="${v}">`).join('')}</datalist>`;
+}
+
+function antibodyDatalist() {
+  const antibodies = [...new Set(S.data.slides.map(s=>s.antibody).filter(Boolean))].sort();
+  return `<datalist id="antibody-list">${antibodies.map(a=>`<option value="${a}">`).join('')}</datalist>`;
+}
+
+
 function showModal(html) {
   document.getElementById('modal-area').innerHTML = `<div class="overlay" id="overlay">${html}</div>`;
   document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeModal(); });
@@ -509,12 +520,14 @@ function modalSlide(sl) {
   ].filter(Boolean).map(([l,v])=>`<div class="detail-row"><span class="detail-lbl">${l}</span><span>${v}</span></div>`).join('');
 
   const form = isFree ? `
+    ${protocolDatalist()}
+    ${antibodyDatalist()}
     <div class="form-row"><label>Your name *</label><input id="a-user" value="${S.user?.name||''}"/></div>
     <div class="form-2col">
       <div class="form-row"><label>Stain type</label><select id="a-stain"><option value="">—</option><option>ISH</option><option>IHC</option><option>H&amp;E</option><option>AB-PAS</option><option>Other</option></select></div>
-      <div class="form-row"><label>Protocol ver.</label><input id="a-protocol" placeholder="v1"/></div>
+      <div class="form-row"><label>Protocol ver.</label><input id="a-protocol" list="proto-list" placeholder="e.g. v1" autocomplete="off"/></div>
     </div>
-    <div class="form-row"><label>Antibody / Probe</label><input id="a-antibody" placeholder="e.g. Hmgcs2"/></div>
+    <div class="form-row"><label>Antibody / Probe</label><input id="a-antibody" list="antibody-list" placeholder="e.g. Hmgcs2"/></div>
     <div class="form-row"><label>Purpose / notes</label><textarea id="a-notes" placeholder="What staining run is this for?"></textarea></div>
     <div class="modal-btns">
       <button class="btn" onclick="closeModal()">Cancel</button>
@@ -787,7 +800,7 @@ function bindMain() {
   on('btn-admin',()=>{ S.isAdmin?(S.isAdmin=false,render()):modalPin(); });
   on('btn-export', doExport);
   on('btn-signout',()=>{ gToken=null;S.user=null;S.isAdmin=false;S.view='signin';render(); });
-  document.querySelectorAll('[data-tab]').forEach(el=>el.addEventListener('click',()=>{ S.tab=el.dataset.tab; renderTab(); bindMain(); }));
+  document.querySelectorAll('[data-tab]').forEach(el=>el.addEventListener('click',()=>{ S.tab=el.dataset.tab; render(); }));
 }
 
 function bindTab() {
