@@ -26,399 +26,288 @@ const CONFIG = {
 
 <script src="https://accounts.google.com/gsi/client"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --c-bg: #f8f7f4;
-    --c-surface: #ffffff;
-    --c-border: #e2e0da;
-    --c-border-strong: #c8c5bc;
-    --c-text: #1a1917;
-    --c-text-2: #5a5855;
-    --c-text-3: #9a9895;
-    --c-green: #2d7a47;
-    --c-green-bg: #edf7f1;
-    --c-green-border: #a8d9bb;
-    --c-amber: #8a5c00;
-    --c-amber-bg: #fdf5e0;
-    --c-amber-border: #f0cc6a;
-    --c-red: #c0392b;
-    --c-red-bg: #fdf0ee;
-    --c-red-border: #f0a89e;
-    --c-blue: #1a5fa8;
-    --c-blue-bg: #eef4fd;
-    --c-accent: #3b5bdb;
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 14px;
-    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    --font-mono: 'Courier New', monospace;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f6f3;--surface:#fff;--border:#e4e2db;--border-strong:#c8c5bc;
+  --text:#1a1917;--text2:#5c5a57;--text3:#9a9895;
+  --green:#1e6e3a;--green-bg:#eaf5ef;--green-border:#a8d9bb;
+  --amber:#7a5000;--amber-bg:#fdf4e0;--amber-border:#e8c55a;
+  --red:#b83232;--red-bg:#fdf0f0;--red-border:#f0a8a8;
+  --blue:#1a5fa8;--blue-bg:#eef4fd;
+  --accent:#3b5bdb;--accent-light:#eef0fd;
+  --radius:8px;--radius-lg:12px;
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'Courier New',monospace;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#141413;--surface:#1e1e1c;--border:#2e2e2b;--border-strong:#444440;
+    --text:#f0ede8;--text2:#a0a09a;--text3:#666660;
+    --green:#5dd888;--green-bg:#0f2a1a;--green-border:#1e4d2e;
+    --amber:#f0c040;--amber-bg:#211900;--amber-border:#4a3800;
+    --red:#f07070;--red-bg:#2a0f0f;--red-border:#4a1a1a;
+    --blue:#6aa3e8;--blue-bg:#0f1e35;
+    --accent:#7b97f5;--accent-light:#1a1f40;
   }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --c-bg: #141413;
-      --c-surface: #1e1e1c;
-      --c-border: #2e2e2b;
-      --c-border-strong: #444440;
-      --c-text: #f0ede8;
-      --c-text-2: #a0a09a;
-      --c-text-3: #666660;
-      --c-green: #5dd888;
-      --c-green-bg: #0f2a1a;
-      --c-green-border: #1e4d2e;
-      --c-amber: #f0c040;
-      --c-amber-bg: #211900;
-      --c-amber-border: #4a3800;
-      --c-red: #f07070;
-      --c-red-bg: #2a0f0f;
-      --c-red-border: #4a1a1a;
-      --c-blue: #6aa3e8;
-      --c-blue-bg: #0f1e35;
-      --c-accent: #7b97f5;
-    }
-  }
-
-  body { font-family: var(--font); background: var(--c-bg); color: var(--c-text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
-
-  /* ── Layout ── */
-  #app { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
-  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
-  .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--c-text); }
-  .logo sub { font-size: 12px; font-weight: 400; color: var(--c-text-2); margin-left: 6px; letter-spacing: 0; vertical-align: middle; }
-  .topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .user-chip { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--c-text-2); background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 20px; padding: 4px 12px; }
-  .user-chip img { width: 20px; height: 20px; border-radius: 50%; }
-
-  /* ── Buttons ── */
-  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius-sm); border: 1px solid var(--c-border-strong); background: var(--c-surface); color: var(--c-text); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .12s, border-color .12s; white-space: nowrap; }
-  .btn:hover { background: var(--c-bg); }
-  .btn-primary { background: var(--c-accent); color: #fff; border-color: transparent; }
-  .btn-primary:hover { opacity: .88; }
-  .btn-danger { color: var(--c-red); border-color: var(--c-red-border); }
-  .btn-sm { padding: 4px 10px; font-size: 12px; }
-  .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
-
-  /* ── Tabs ── */
-  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--c-border); margin-bottom: 1.25rem; }
-  .tab { padding: 9px 20px; font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; color: var(--c-text-2); transition: all .12s; }
-  .tab:hover { color: var(--c-text); }
-  .tab.active { color: var(--c-accent); border-bottom-color: var(--c-accent); }
-
-  /* ── Filters ── */
-  .filters { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }
-  .filters input, .filters select { font-size: 13px; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--c-border-strong); background: var(--c-surface); color: var(--c-text); height: 34px; }
-
-  /* ── Stats ── */
-  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
-  .stat-card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-md); padding: .85rem 1rem; }
-  .stat-val { font-size: 24px; font-weight: 700; }
-  .stat-lbl { font-size: 11px; color: var(--c-text-2); margin-top: 2px; text-transform: uppercase; letter-spacing: .4px; }
-
-  /* ── Experiment card ── */
-  .exp-card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: .85rem; }
-  .exp-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: .85rem; gap: 10px; }
-  .exp-id { font-size: 15px; font-weight: 700; color: var(--c-text); }
-  .exp-name { font-size: 12px; color: var(--c-text-2); margin-top: 1px; }
-  .exp-meta { font-size: 11px; color: var(--c-text-3); margin-top: 2px; }
-  .badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
-  .badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: .3px; }
-  .badge-organ { background: var(--c-blue-bg); color: var(--c-blue); }
-  .badge-depleted { background: var(--c-red-bg); color: var(--c-red); }
-  .badge-legacy { background: var(--c-bg); color: var(--c-text-3); border: 1px solid var(--c-border); }
-  .adj-line { font-size: 11px; color: var(--c-text-3); font-family: var(--font-mono); margin-top: 6px; }
-
-  /* ── Batch + slides ── */
-  .batch-block { margin-bottom: .75rem; }
-  .batch-label { font-size: 11px; font-weight: 600; color: var(--c-text-3); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 7px; }
-  .slides-row { display: flex; gap: 6px; flex-wrap: wrap; }
-  .slide-btn { width: 38px; height: 38px; border-radius: var(--radius-sm); border: 1.5px solid; font-size: 12px; font-weight: 700; cursor: pointer; transition: transform .1s, box-shadow .1s; display: flex; align-items: center; justify-content: center; position: relative; }
-  .slide-btn:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,.15); }
-  .slide-btn:active { transform: scale(.97); }
-  .slide-free { background: var(--c-green-bg); color: var(--c-green); border-color: var(--c-green-border); }
-  .slide-reserved { background: var(--c-amber-bg); color: var(--c-amber); border-color: var(--c-amber-border); }
-  .slide-used { background: var(--c-bg); color: var(--c-text-3); border-color: var(--c-border); cursor: default; }
-  .slide-used:hover { transform: none; box-shadow: none; }
-
-  /* ── Legend ── */
-  .legend { display: flex; gap: 14px; margin-bottom: 1rem; flex-wrap: wrap; }
-  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--c-text-2); }
-  .leg-dot { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid; }
-  .leg-free { background: var(--c-green-bg); border-color: var(--c-green-border); }
-  .leg-res { background: var(--c-amber-bg); border-color: var(--c-amber-border); }
-  .leg-used { background: var(--c-bg); border-color: var(--c-border); }
-
-  /* ── Modal ── */
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1rem 2rem; z-index: 200; overflow-y: auto; }
-  .modal { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-lg); padding: 1.5rem; width: 100%; max-width: 460px; }
-  .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 1.25rem; }
-  .modal-slide-id { font-size: 12px; font-family: var(--font-mono); color: var(--c-text-2); background: var(--c-bg); border-radius: var(--radius-sm); padding: 4px 10px; margin-bottom: 1rem; display: inline-block; }
-
-  /* ── Forms ── */
-  .form-row { margin-bottom: .85rem; }
-  .form-row label { font-size: 12px; font-weight: 600; color: var(--c-text-2); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .3px; }
-  .form-row input, .form-row select, .form-row textarea { width: 100%; font-size: 13px; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--c-border-strong); background: var(--c-surface); color: var(--c-text); }
-  .form-row textarea { height: 64px; resize: vertical; }
-  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { outline: 2px solid var(--c-accent); outline-offset: 1px; }
-  .form-check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-  .form-check input { width: auto; }
-  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; flex-wrap: wrap; }
-
-  /* ── Slide detail box ── */
-  .detail-box { background: var(--c-bg); border-radius: var(--radius-md); padding: .85rem 1rem; margin-bottom: 1rem; }
-  .detail-row { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 0; font-size: 13px; border-bottom: 1px solid var(--c-border); }
-  .detail-row:last-child { border-bottom: none; }
-  .detail-lbl { color: var(--c-text-2); font-size: 12px; }
-  .status-pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: .3px; }
-  .pill-free { background: var(--c-green-bg); color: var(--c-green); }
-  .pill-reserved { background: var(--c-amber-bg); color: var(--c-amber); }
-  .pill-used { background: var(--c-bg); color: var(--c-text-3); border: 1px solid var(--c-border); }
-
-  /* ── Info / error boxes ── */
-  .info-box { background: var(--c-blue-bg); border: 1px solid #b8d4f8; border-radius: var(--radius-md); padding: .85rem 1rem; font-size: 13px; color: var(--c-blue); margin-bottom: 1rem; line-height: 1.6; }
-  .info-box strong { font-weight: 700; }
-  .warn-box { background: var(--c-amber-bg); border: 1px solid var(--c-amber-border); border-radius: var(--radius-md); padding: .85rem 1rem; font-size: 13px; color: var(--c-amber); margin-bottom: 1rem; }
-  .err-box { background: var(--c-red-bg); border: 1px solid var(--c-red-border); border-radius: var(--radius-md); padding: .85rem 1rem; font-size: 13px; color: var(--c-red); margin-bottom: 1rem; }
-
-  /* ── Log ── */
-  .log-item { border-bottom: 1px solid var(--c-border); padding: .7rem 0; }
-  .log-item:last-child { border-bottom: none; }
-  .log-id { font-family: var(--font-mono); font-size: 12px; color: var(--c-text-2); }
-  .log-action { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
-  .log-used { color: var(--c-red); }
-  .log-reserved { color: var(--c-amber); }
-  .log-released { color: var(--c-text-3); }
-
-  /* ── Setup / sign-in ── */
-  .setup-wrap { max-width: 520px; margin: 3rem auto; }
-  .setup-card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-lg); padding: 2rem; }
-  .setup-card h2 { font-size: 20px; font-weight: 700; margin-bottom: .5rem; }
-  .setup-card p { font-size: 13px; color: var(--c-text-2); margin-bottom: 1.5rem; line-height: 1.6; }
-
-  /* ── Loader ── */
-  .loader { display: flex; align-items: center; justify-content: center; padding: 3rem; color: var(--c-text-3); font-size: 13px; gap: 10px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spinner { width: 18px; height: 18px; border: 2px solid var(--c-border); border-top-color: var(--c-accent); border-radius: 50%; animation: spin .7s linear infinite; }
-
-  /* ── Empty state ── */
-  .empty { text-align: center; padding: 3rem; color: var(--c-text-3); font-size: 14px; }
-
-  /* ── Pin input ── */
-  .pin-field { text-align: center; font-size: 22px; letter-spacing: 8px; font-family: var(--font-mono); }
-
-  /* ── Divider ── */
-  .divider { height: 1px; background: var(--c-border); margin: 1rem 0; }
-
-  .saving-indicator { font-size: 12px; color: var(--c-text-3); }
-
-  @media (max-width: 600px) {
-    .topbar { flex-direction: column; align-items: flex-start; }
-    .slide-btn { width: 34px; height: 34px; font-size: 11px; }
-  }
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+#app{max-width:980px;margin:0 auto;padding:1.25rem 1rem 4rem}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px}
+.logo{font-size:19px;font-weight:700;letter-spacing:-.5px}
+.logo sub{font-size:12px;font-weight:400;color:var(--text2);margin-left:6px;letter-spacing:0;vertical-align:middle}
+.topbar-r{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.user-chip{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 12px}
+.user-chip img{width:20px;height:20px;border-radius:50%}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;transition:background .12s;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--accent);color:#fff;border-color:transparent}
+.btn-primary:hover{opacity:.88}
+.btn-danger{color:var(--red);border-color:var(--red-border)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn svg{width:14px;height:14px;flex-shrink:0}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
+.tab{padding:8px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);transition:all .12s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:1.25rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem 1rem}
+.stat-val{font-size:22px;font-weight:700}
+.stat-lbl{font-size:11px;color:var(--text2);margin-top:1px;text-transform:uppercase;letter-spacing:.4px}
+.exp-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:.85rem;overflow:hidden}
+.exp-header{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.1rem;cursor:pointer;user-select:none;gap:10px}
+.exp-header:hover{background:var(--bg)}
+.exp-title{font-size:15px;font-weight:700}
+.exp-desc{font-size:12px;color:var(--text2);margin-top:1px}
+.exp-chevron{color:var(--text3);transition:transform .2s;flex-shrink:0}
+.exp-chevron.open{transform:rotate(90deg)}
+.exp-body{border-top:1px solid var(--border)}
+.mouse-block{border-bottom:1px solid var(--border)}
+.mouse-block:last-child{border-bottom:none}
+.mouse-header{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1.1rem .7rem 1.5rem;cursor:pointer;gap:10px}
+.mouse-header:hover{background:var(--bg)}
+.mouse-id{font-size:13px;font-weight:700;font-family:var(--mono)}
+.mouse-meta{font-size:11px;color:var(--text2);margin-top:1px}
+.mouse-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px}
+.b-organ{background:var(--blue-bg);color:var(--blue)}
+.b-depleted{background:var(--red-bg);color:var(--red)}
+.b-legacy{background:var(--bg);color:var(--text3);border:1px solid var(--border)}
+.mouse-stats{font-size:11px;color:var(--text3);font-family:var(--mono);white-space:nowrap}
+.mouse-body{padding:.75rem 1.1rem .75rem 1.5rem;background:var(--bg)}
+.batch-block{margin-bottom:.75rem}
+.batch-block:last-child{margin-bottom:0}
+.batch-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.slides-row{display:flex;gap:5px;flex-wrap:wrap}
+.slide-btn{width:36px;height:36px;border-radius:var(--radius);border:1.5px solid;font-size:12px;font-weight:700;cursor:pointer;transition:transform .1s,box-shadow .1s;display:flex;align-items:center;justify-content:center}
+.slide-btn:hover{transform:scale(1.1);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.slide-free{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+.slide-reserved{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border)}
+.slide-used{background:var(--bg);color:var(--text3);border-color:var(--border);cursor:default}
+.slide-used:hover{transform:none;box-shadow:none}
+.adj-line{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:6px}
+.legend{display:flex;gap:14px;margin-bottom:1rem;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)}
+.leg-dot{width:11px;height:11px;border-radius:3px;border:1.5px solid}
+.leg-free{background:var(--green-bg);border-color:var(--green-border)}
+.leg-res{background:var(--amber-bg);border-color:var(--amber-border)}
+.leg-used{background:var(--bg);border-color:var(--border)}
+.filters{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
+.filters input,.filters select{font-size:13px;padding:5px 9px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface);color:var(--text);height:32px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;padding:3rem 1rem 2rem;z-index:200;overflow-y:auto}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;width:100%;max-width:460px}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:1.1rem}
+.slide-ref{font-size:12px;font-family:var(--mono);color:var(--text2);background:var(--bg);border-radius:var(--radius);padding:4px 10px;margin-bottom:1rem;display:inline-block}
+.form-row{margin-bottom:.8rem}
+.form-row label{font-size:11px;font-weight:700;color:var(--text2);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px}
+.form-row input,.form-row select,.form-row textarea{width:100%;font-size:13px;padding:7px 9px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface);color:var(--text)}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.form-row textarea{height:60px;resize:vertical}
+.form-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-check{display:flex;align-items:center;gap:7px;font-size:13px}
+.form-check input[type=checkbox]{width:auto}
+.modal-btns{display:flex;gap:7px;justify-content:flex-end;margin-top:1.1rem;flex-wrap:wrap}
+.detail-box{background:var(--bg);border-radius:var(--radius);padding:.75rem 1rem;margin-bottom:.85rem}
+.detail-row{display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;font-size:13px;border-bottom:1px solid var(--border)}
+.detail-row:last-child{border-bottom:none}
+.detail-lbl{color:var(--text2);font-size:12px;flex-shrink:0;margin-right:8px}
+.pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px}
+.pill-free{background:var(--green-bg);color:var(--green)}
+.pill-reserved{background:var(--amber-bg);color:var(--amber)}
+.pill-used{background:var(--bg);color:var(--text3);border:1px solid var(--border)}
+.info-box{background:var(--blue-bg);border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;color:var(--blue);margin-bottom:.85rem;line-height:1.6}
+.err-box{background:var(--red-bg);border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;color:var(--red);margin-bottom:.85rem}
+.log-item{border-bottom:1px solid var(--border);padding:.65rem 0}
+.log-item:last-child{border-bottom:none}
+.log-used{color:var(--red)}
+.log-reserved{color:var(--amber)}
+.log-released{color:var(--text3)}
+.setup-wrap{max-width:480px;margin:3rem auto}
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem}
+.setup-card h2{font-size:20px;font-weight:700;margin-bottom:.5rem}
+.setup-card p{font-size:13px;color:var(--text2);margin-bottom:1.25rem;line-height:1.6}
+.loader{display:flex;align-items:center;justify-content:center;padding:3rem;color:var(--text3);font-size:13px;gap:10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+.empty{text-align:center;padding:3rem;color:var(--text3);font-size:14px}
+.pin-field{text-align:center;font-size:22px;letter-spacing:8px;font-family:var(--mono)}
+.divider{height:1px;background:var(--border);margin:1rem 0}
+.saving{font-size:12px;color:var(--text3)}
 </style>
 </head>
 <body>
 <div id="app"></div>
-
 <script>
-// ── Sheets API helpers ──────────────────────────────────────────────────
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
-const DISCOVERY = 'https://sheets.googleapis.com/v4/spreadsheets';
-
-// Sheet tab names — these will be auto-created on first run
-const TAB = {
-  EXPERIMENTS: 'experiments',
-  SLIDES: 'slides',
-  LOG: 'usage_log',
+const TAB = { EXP:'experiments', MICE:'mice', SLIDES:'slides', LOG:'usage_log' };
+const COLS = {
+  EXP:   ['id','name','description'],
+  MICE:  ['id','expId','mouseNum','organ','breederNo','gender','weightG','takedownAge','tissueDate','sectioningDate','depleted','legacy','notes'],
+  SLIDES:['id','mouseId','batch','slideNum','status','usedBy','usedFor','stainType','antibody','protocolVer','dateUsed','notes'],
+  LOG:   ['timestamp','slideId','action','user','mouseId','batch','slideNum','details'],
 };
 
-let gToken = null; // OAuth access token
+const S = {
+  view:'signin', tab:'inventory',
+  user:null, isAdmin:false,
+  data:{ experiments:[], mice:[], slides:[], usageLog:[] },
+  ui:{ expandedExps:{}, expandedMice:{} },
+  filter:{ organ:'all', status:'all', search:'' },
+  loading:false, saving:false, error:null,
+  slideRowMap:{},
+};
 
+let gToken = null, tokenClient = null;
+
+// ── Sheets API ────────────────────────────────────────────────────────────
 async function sheetsReq(method, path, body) {
-  if (!gToken) throw new Error('Not signed in');
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}${path}`;
   const res = await fetch(url, {
     method,
-    headers: { Authorization: `Bearer ${gToken}`, 'Content-Type': 'application/json' },
+    headers:{ Authorization:`Bearer ${gToken}`, 'Content-Type':'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Sheets API error ${res.status}: ${err}`);
-  }
+  if (!res.ok) { const t = await res.text(); throw new Error(`Sheets ${res.status}: ${t.slice(0,200)}`); }
   return res.json();
 }
 
-async function readSheet(tab) {
-  const res = await sheetsReq('GET', `/values/${encodeURIComponent(tab)}`);
-  return res.values || [];
+async function readTab(tab) {
+  try {
+    const res = await sheetsReq('GET', `/values/${encodeURIComponent(tab)}`);
+    return res.values || [];
+  } catch(e) { console.warn('readTab', tab, e.message); return []; }
 }
 
 async function appendRow(tab, row) {
-  await sheetsReq('POST', `/values/${encodeURIComponent(tab)}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
-    values: [row],
-  });
+  await sheetsReq('POST', `/values/${encodeURIComponent(tab)}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, { values:[row] });
 }
 
-async function updateCell(tab, row1, col1, value) {
-  // row1 and col1 are 1-indexed
-  const colLetter = String.fromCharCode(64 + col1);
-  const range = `${tab}!${colLetter}${row1}`;
-  await sheetsReq('PUT', `/values/${encodeURIComponent(range)}?valueInputOption=RAW`, {
-    values: [[value]],
-  });
-}
-
-async function updateRow(tab, row1, values) {
+async function updateSheetRow(tab, rowIdx, values) {
   const endCol = String.fromCharCode(64 + values.length);
-  const range = `${tab}!A${row1}:${endCol}${row1}`;
-  await sheetsReq('PUT', `/values/${encodeURIComponent(range)}?valueInputOption=RAW`, {
-    values: [values],
-  });
+  await sheetsReq('PUT', `/values/${encodeURIComponent(tab)}!A${rowIdx}:${endCol}${rowIdx}?valueInputOption=RAW`, { values:[values] });
 }
 
-// ── Data model ──────────────────────────────────────────────────────────
-// experiments: [id, name, organ, takedown_age, tissue_date, staining_plan, depleted, legacy, sectioning_requested_date, notes]
-// slides:      [id, exp_id, batch, slide_num, status, used_by, used_for, stain_type, antibody, protocol_ver, date_used, notes]
-// usage_log:   [timestamp, slide_id, action, user, exp_id, batch, slide_num, details]
-
-const EXP_COLS = ['id','name','organ','takedownAge','tissueDate','stainingPlan','depleted','legacy','sectioningDate','notes'];
-const SLIDE_COLS = ['id','expId','batch','slideNum','status','usedBy','usedFor','stainType','antibody','protocolVer','dateUsed','notes'];
-const LOG_COLS = ['timestamp','slideId','action','user','expId','batch','slideNum','details'];
-
-function rowToObj(headers, row) {
-  const obj = {};
-  headers.forEach((h, i) => { obj[h] = row[i] !== undefined ? row[i] : ''; });
-  return obj;
+function rowToObj(cols, row) {
+  const o = {};
+  cols.forEach((c,i) => { o[c] = row[i] !== undefined ? String(row[i]) : ''; });
+  return o;
 }
 
-function objToRow(headers, obj) {
-  return headers.map(h => obj[h] !== undefined ? String(obj[h]) : '');
+function objToRow(cols, obj) {
+  return cols.map(c => obj[c] !== undefined ? String(obj[c]) : '');
 }
 
 async function ensureHeaders() {
-  // Write header rows if sheet tabs are empty
-  for (const [tab, cols] of [[TAB.EXPERIMENTS, EXP_COLS],[TAB.SLIDES, SLIDE_COLS],[TAB.LOG, LOG_COLS]]) {
-    try {
-      const rows = await readSheet(tab);
-      if (rows.length === 0) {
-        await sheetsReq('POST', `/values/${encodeURIComponent(tab)}!A1:append?valueInputOption=RAW`, {
-          values: [cols],
-        });
-      }
-    } catch(e) {
-      // Tab may not exist — user needs to create it manually
-      console.warn('Tab issue:', tab, e.message);
-    }
+  for (const [tab, cols] of [[TAB.EXP,COLS.EXP],[TAB.MICE,COLS.MICE],[TAB.SLIDES,COLS.SLIDES],[TAB.LOG,COLS.LOG]]) {
+    const rows = await readTab(tab);
+    if (rows.length === 0) await appendRow(tab, cols);
   }
 }
 
-async function loadData() {
-  const [expRows, slideRows, logRows] = await Promise.all([
-    readSheet(TAB.EXPERIMENTS),
-    readSheet(TAB.SLIDES),
-    readSheet(TAB.LOG),
+async function loadAllData() {
+  await ensureHeaders();
+  const [expRows, miceRows, slideRows, logRows] = await Promise.all([
+    readTab(TAB.EXP), readTab(TAB.MICE), readTab(TAB.SLIDES), readTab(TAB.LOG),
   ]);
-
-  const parseRows = (rows, cols) => {
+  function parse(rows, cols) {
     if (rows.length < 2) return [];
-    return rows.slice(1).filter(r => r[0]).map(r => rowToObj(cols, r));
-  };
-
-  return {
-    experiments: parseRows(expRows, EXP_COLS),
-    slides: parseRows(slideRows, SLIDE_COLS).map(s => ({...s, slideNum: parseInt(s.slideNum)||0, batch: s.batch===''||s.batch==='null' ? null : (isNaN(parseInt(s.batch)) ? s.batch : parseInt(s.batch))})),
-    usageLog: parseRows(logRows, LOG_COLS),
-  };
+    return rows.slice(1).filter(r => r && r[0]).map(r => rowToObj(cols, r));
+  }
+  const slides = parse(slideRows, COLS.SLIDES).map(s => ({
+    ...s,
+    slideNum: parseInt(s.slideNum) || 0,
+    batch: (s.batch===''||s.batch==='null') ? null : (isNaN(parseInt(s.batch)) ? null : parseInt(s.batch)),
+  }));
+  S.slideRowMap = {};
+  slides.forEach((sl, i) => { S.slideRowMap[sl.id] = i + 2; });
+  return { experiments: parse(expRows, COLS.EXP), mice: parse(miceRows, COLS.MICE), slides, usageLog: parse(logRows, COLS.LOG) };
 }
 
-// ── State ───────────────────────────────────────────────────────────────
-const S = {
-  view: 'signin',   // 'signin' | 'app'
-  tab: 'inventory',
-  user: null,       // { name, email, picture }
-  isAdmin: false,
-  data: { experiments: [], slides: [], usageLog: [] },
-  modal: null,
-  selectedSlide: null,
-  filter: { organ: 'all', status: 'all', search: '' },
-  loading: false,
-  saving: false,
-  error: null,
-  slideRowMap: {},  // slideId -> 1-indexed row in sheet
-};
-
-// ── Adjacency ────────────────────────────────────────────────────────────
-function computeAdjacency(slides, expId) {
-  const expSlides = slides.filter(s => s.expId === expId);
-  const batches = [...new Set(expSlides.map(s => s.batch))];
+// ── Adjacency ─────────────────────────────────────────────────────────────
+function computeAdjacency(slides) {
+  const batches = [...new Set(slides.map(s => s.batch))];
   const parts = [];
   batches.forEach(bk => {
-    const bslides = expSlides
-      .filter(s => s.batch === bk && s.status === 'free')
-      .sort((a, b) => a.slideNum - b.slideNum);
-    if (!bslides.length) return;
-    let run = [bslides[0].slideNum];
-    for (let i = 1; i < bslides.length; i++) {
-      if (bslides[i].slideNum === bslides[i-1].slideNum + 1) {
-        run.push(bslides[i].slideNum);
-      } else {
-        parts.push(run.length === 1 ? '1' : run.length + 'adj(S'+run[0]+'-S'+run[run.length-1]+')');
-        run = [bslides[i].slideNum];
-      }
+    const free = slides.filter(s => s.batch===bk && s.status==='free').sort((a,b)=>a.slideNum-b.slideNum);
+    if (!free.length) return;
+    let run = [free[0]];
+    for (let i=1;i<free.length;i++) {
+      if (free[i].slideNum === free[i-1].slideNum+1) run.push(free[i]);
+      else { parts.push(runStr(run)); run=[free[i]]; }
     }
-    parts.push(run.length === 1 ? '1' : run.length + 'adj(S'+run[0]+'-S'+run[run.length-1]+')');
+    parts.push(runStr(run));
   });
   return parts.length ? parts.join(' · ') : 'none free';
 }
-
-// ── Render helpers ───────────────────────────────────────────────────────
-const h = (tag, attrs, ...children) => {
-  const el = document.createElement(tag);
-  Object.entries(attrs||{}).forEach(([k,v]) => {
-    if (k === 'cls') el.className = v;
-    else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
-    else el.setAttribute(k, v);
-  });
-  children.forEach(c => {
-    if (c == null) return;
-    el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
-  });
-  return el;
-};
-
-function setHTML(id, html) {
-  const el = document.getElementById(id) || document.getElementById('app');
-  el.innerHTML = html;
+function runStr(run) {
+  return run.length===1 ? '1' : `${run.length}adj(S${run[0].slideNum}-S${run[run.length-1].slideNum})`;
 }
 
-// ── SVG icons ────────────────────────────────────────────────────────────
-const icon = {
-  download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
-  lock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
-  unlock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`,
-  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
-  refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`,
-  logout: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
+// ── Auth ──────────────────────────────────────────────────────────────────
+function initTokenClient() {
+  if (!window.google) return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.GOOGLE_CLIENT_ID,
+    scope: SCOPES,
+    prompt: 'select_account',
+    callback: async (resp) => {
+      if (resp.error) { S.error = 'Auth error: ' + resp.error; render(); return; }
+      gToken = resp.access_token;
+      try {
+        const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers:{ Authorization:`Bearer ${gToken}` } });
+        const info = await r.json();
+        S.user = { name: info.name, email: info.email, picture: info.picture };
+      } catch(e) { S.user = { name:'Lab member', email:'', picture:'' }; }
+      S.view = 'app'; S.loading = true; render();
+      try { S.data = await loadAllData(); } catch(e) { S.error = 'Could not load sheet: ' + e.message; }
+      S.loading = false; render();
+    },
+  });
+}
+
+// ── SVG icons ─────────────────────────────────────────────────────────────
+const SVG = {
+  chevron:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>`,
+  plus:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  lock:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+  unlock:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`,
+  download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+  refresh:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`,
+  logout:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
 };
 
-// ── Main render ──────────────────────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────────────────
 function render() {
-  const root = document.getElementById('app');
-
   if (S.view === 'signin') { renderSignin(); return; }
-
-  root.innerHTML = `
-  <div id="main-wrap">
+  document.getElementById('app').innerHTML = `
     <div class="topbar">
       <div class="logo">SlideTrack <sub>Lab Slide Inventory</sub></div>
-      <div class="topbar-right">
-        ${S.saving ? `<span class="saving-indicator">Saving…</span>` : ''}
-        ${S.user ? `<div class="user-chip">${S.user.picture ? `<img src="${S.user.picture}" alt="">` : ''}<span>${S.user.name||S.user.email}</span></div>` : ''}
-        <button class="btn btn-sm" id="btn-refresh">${icon.refresh} Refresh</button>
-        <button class="btn btn-sm" id="btn-admin">${S.isAdmin ? icon.unlock : icon.lock} ${S.isAdmin ? 'Admin on' : 'Admin'}</button>
-        <button class="btn btn-sm" id="btn-export">${icon.download} Export</button>
-        <button class="btn btn-sm btn-danger" id="btn-signout">${icon.logout}</button>
+      <div class="topbar-r">
+        ${S.saving ? `<span class="saving">Saving…</span>` : ''}
+        ${S.user ? `<div class="user-chip">${S.user.picture?`<img src="${S.user.picture}">`:''}${S.user.name||S.user.email}</div>` : ''}
+        <button class="btn btn-sm" id="btn-refresh">${SVG.refresh} Refresh</button>
+        <button class="btn btn-sm" id="btn-admin">${S.isAdmin?SVG.unlock:SVG.lock} ${S.isAdmin?'Admin on':'Admin'}</button>
+        <button class="btn btn-sm" id="btn-export">${SVG.download} Export</button>
+        <button class="btn btn-sm btn-danger" id="btn-signout">${SVG.logout}</button>
       </div>
     </div>
     <div class="tabs">
@@ -426,172 +315,137 @@ function render() {
       <div class="tab ${S.tab==='log'?'active':''}" data-tab="log">Usage log</div>
     </div>
     <div id="tab-content"></div>
-    <div id="modal-area"></div>
-  </div>`;
-
+    <div id="modal-area"></div>`;
   renderTab();
   bindMain();
 }
 
-let tokenClient = null;
-let pendingUserInfo = null;
-
-function initTokenClient() {
-  if (!window.google) return;
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CONFIG.GOOGLE_CLIENT_ID,
-    scope: SCOPES,
-    prompt: 'select_account',
-    callback: async (tokenResponse) => {
-      if (tokenResponse.error) {
-        S.error = 'Auth error: ' + tokenResponse.error;
-        render();
-        return;
-      }
-      gToken = tokenResponse.access_token;
-
-      // Get user info from Google
-      try {
-        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${gToken}` }
-        });
-        const info = await res.json();
-        S.user = { name: info.name, email: info.email, picture: info.picture };
-      } catch(e) {
-        S.user = { name: 'Lab member', email: '', picture: '' };
-      }
-
-      S.view = 'app';
-      S.loading = true;
-      render();
-      loadData().then(data => {
-        S.data = data;
-        S.loading = false;
-        buildSlideRowMap();
-        render();
-      }).catch(e => {
-        S.loading = false;
-        S.error = 'Could not load sheet: ' + e.message;
-        render();
-      });
-    },
-  });
-}
-
 function renderSignin() {
   document.getElementById('app').innerHTML = `
-  <div class="setup-wrap">
-    <div class="setup-card">
-      <h2>SlideTrack</h2>
-      <p>Sign in with your Google account to access the lab slide inventory. Any Google account can view and use slides. Admin actions require the lab PIN.</p>
-      <button class="btn btn-primary" id="btn-gsignin" style="width:100%;justify-content:center;padding:10px;font-size:15px">Sign in with Google</button>
-      <div id="signin-err"></div>
-      <div class="divider"></div>
-      <p style="font-size:12px;color:var(--c-text-3)">Data is stored directly in your lab's Google Sheet — no other servers involved.</p>
-    </div>
-  </div>`;
-
+  <div class="setup-wrap"><div class="setup-card">
+    <h2>SlideTrack</h2>
+    <p>Sign in with your Google account to access the lab slide inventory.</p>
+    <button class="btn btn-primary" id="btn-gsignin" style="width:100%;justify-content:center;padding:10px;font-size:14px">Sign in with Google</button>
+    <div id="signin-err"></div>
+    <div class="divider"></div>
+    <p style="font-size:12px;color:var(--text3)">Data lives in your lab's Google Sheet. No other servers involved.</p>
+  </div></div>`;
   document.getElementById('btn-gsignin').addEventListener('click', () => {
-    if (!window.google) {
-      document.getElementById('signin-err').innerHTML = `<div class="err-box" style="margin-top:1rem">Google auth failed to load. Check your internet connection.</div>`;
-      return;
-    }
+    if (!window.google) { document.getElementById('signin-err').innerHTML=`<div class="err-box" style="margin-top:1rem">Google auth failed to load.</div>`; return; }
     if (!tokenClient) initTokenClient();
     tokenClient.requestAccessToken();
-  });
-}
-
-function buildSlideRowMap() {
-  // Maps slideId -> 1-indexed sheet row (row 1 = header)
-  S.slideRowMap = {};
-  S.data.slides.forEach((sl, i) => {
-    S.slideRowMap[sl.id] = i + 2; // +1 for header, +1 for 1-indexing
   });
 }
 
 function renderTab() {
   const el = document.getElementById('tab-content');
   if (!el) return;
-  if (S.loading) { el.innerHTML = `<div class="loader"><div class="spinner"></div> Loading from Google Sheets…</div>`; return; }
-  if (S.error) { el.innerHTML = `<div class="err-box"><strong>Error:</strong> ${S.error} <button class="btn btn-sm" onclick="S.error=null;render()">Dismiss</button></div>`; }
-  if (S.tab === 'inventory') el.innerHTML = renderInventoryHTML();
-  else el.innerHTML = renderLogHTML();
+  if (S.loading) { el.innerHTML=`<div class="loader"><div class="spinner"></div> Loading from Google Sheets…</div>`; return; }
+  let html = '';
+  if (S.error) html += `<div class="err-box"><strong>Error:</strong> ${S.error} <button class="btn btn-sm" id="btn-dismiss">Dismiss</button></div>`;
+  html += S.tab==='inventory' ? renderInventoryHTML() : renderLogHTML();
+  el.innerHTML = html;
+  document.getElementById('btn-dismiss')?.addEventListener('click', ()=>{ S.error=null; renderTab(); });
   bindTab();
 }
 
 function renderInventoryHTML() {
-  const { experiments, slides } = S.data;
-  const { organ, status, search } = S.filter;
+  const {experiments, mice, slides} = S.data;
+  const {organ, status, search} = S.filter;
+  const totalFree = slides.filter(s=>s.status==='free').length;
+  const totalRes  = slides.filter(s=>s.status==='reserved').length;
+  const totalUsed = slides.filter(s=>s.status==='used').length;
+  const organs = [...new Set(mice.map(m=>m.organ))].filter(Boolean);
 
   let exps = experiments;
-  if (organ !== 'all') exps = exps.filter(e => e.organ === organ);
   if (search) exps = exps.filter(e =>
     e.id.toLowerCase().includes(search.toLowerCase()) ||
-    e.name.toLowerCase().includes(search.toLowerCase())
+    (e.name||'').toLowerCase().includes(search.toLowerCase()) ||
+    mice.some(m=>m.expId===e.id && m.id.toLowerCase().includes(search.toLowerCase()))
   );
+  if (organ !== 'all') exps = exps.filter(e => mice.some(m=>m.expId===e.id && m.organ===organ));
 
-  const allSlides = slides;
-  const totalFree = allSlides.filter(s=>s.status==='free').length;
-  const totalRes  = allSlides.filter(s=>s.status==='reserved').length;
-  const totalUsed = allSlides.filter(s=>s.status==='used').length;
-  const organs = [...new Set(experiments.map(e=>e.organ))];
-
-  let expCards = '';
+  let expHTML = '';
   exps.forEach(exp => {
-    const expSlides = slides.filter(s => s.expId === exp.id);
-    if (status !== 'all' && !expSlides.some(s=>s.status===status)) return;
+    const expMice = mice.filter(m=>m.expId===exp.id);
+    const expSlides = slides.filter(s=>expMice.some(m=>m.id===s.mouseId));
+    if (status!=='all' && !expSlides.some(s=>s.status===status)) return;
+    const eFree=expSlides.filter(s=>s.status==='free').length;
+    const eRes=expSlides.filter(s=>s.status==='reserved').length;
+    const eUsed=expSlides.filter(s=>s.status==='used').length;
+    const isOpen = S.ui.expandedExps[exp.id];
 
-    const sFree = expSlides.filter(s=>s.status==='free').length;
-    const sRes  = expSlides.filter(s=>s.status==='reserved').length;
-    const sUsed = expSlides.filter(s=>s.status==='used').length;
-    const adj = computeAdjacency(expSlides, exp.id);
+    let miceHTML = '';
+    expMice.forEach(mouse => {
+      if (organ!=='all' && mouse.organ!==organ) return;
+      const mSlides = slides.filter(s=>s.mouseId===mouse.id);
+      if (status!=='all' && !mSlides.some(s=>s.status===status)) return;
+      const mFree=mSlides.filter(s=>s.status==='free').length;
+      const mRes=mSlides.filter(s=>s.status==='reserved').length;
+      const mUsed=mSlides.filter(s=>s.status==='used').length;
+      const adj = computeAdjacency(mSlides);
+      const isMOpen = S.ui.expandedMice[mouse.id];
 
-    const batches = [...new Set(expSlides.map(s=>s.batch))]
-      .sort((a,b) => a===null ? -1 : b===null ? 1 : a-b);
+      const batches = [...new Set(mSlides.map(s=>s.batch))].sort((a,b)=>a===null?-1:b===null?1:a-b);
+      let batchHTML = '';
+      batches.forEach(bk => {
+        const bSlides = mSlides.filter(s=>s.batch===bk).sort((a,b)=>a.slideNum-b.slideNum);
+        const lbl = bk===null ? 'Legacy (no batch)' : `Batch ${bk}`;
+        const btns = bSlides.map(sl => {
+          const cls = sl.status==='free'?'slide-free':sl.status==='reserved'?'slide-reserved':'slide-used';
+          const tip = sl.status==='free'?'Free — click to use or reserve'
+            :sl.status==='reserved'?`Reserved: ${sl.usedBy||'?'} · ${sl.antibody||sl.usedFor||''}`
+            :`Used: ${sl.usedBy||'?'} · ${sl.antibody||''} ${sl.dateUsed||''}`;
+          return `<button class="slide-btn ${cls}" data-slide="${sl.id}" title="${tip}">${sl.slideNum}</button>`;
+        }).join('');
+        batchHTML += `<div class="batch-block"><div class="batch-label">${lbl}</div><div class="slides-row">${btns}</div></div>`;
+      });
 
-    let batchHTML = '';
-    batches.forEach(bk => {
-      const bslides = expSlides
-        .filter(s => s.batch === bk)
-        .sort((a,b) => a.slideNum - b.slideNum);
-      const label = bk === null ? 'Legacy (no batch)' : `Batch ${bk}`;
-      let btns = bslides.map(sl => {
-        const cls = sl.status==='free' ? 'slide-free' : sl.status==='reserved' ? 'slide-reserved' : 'slide-used';
-        const tip = sl.status==='free' ? 'Free — click to use or reserve'
-          : sl.status==='reserved' ? `Reserved by ${sl.usedBy||'?'} for ${sl.antibody||sl.usedFor||'?'}`
-          : `Used by ${sl.usedBy||'?'} — ${sl.antibody||sl.stainType||''} ${sl.dateUsed||''}`;
-        return `<button class="slide-btn ${cls}" data-slide="${sl.id}" title="${tip}">${sl.slideNum}</button>`;
-      }).join('');
-      batchHTML += `<div class="batch-block"><div class="batch-label">${label}</div><div class="slides-row">${btns}</div></div>`;
+      const meta = [mouse.gender, mouse.weightG?mouse.weightG+'g':'', mouse.takedownAge,
+        mouse.tissueDate?'Tissue:'+mouse.tissueDate:'', mouse.breederNo?'Breeder:'+mouse.breederNo:''].filter(Boolean).join(' · ');
+
+      miceHTML += `<div class="mouse-block">
+        <div class="mouse-header" data-mouse="${mouse.id}">
+          <div>
+            <div class="mouse-id">${mouse.id}</div>
+            <div class="mouse-meta">${meta}</div>
+            <div class="mouse-badges">
+              <span class="badge b-organ">${mouse.organ}</span>
+              ${mouse.depleted==='true'?`<span class="badge b-depleted">Depleted</span>`:''}
+              ${mouse.legacy==='true'?`<span class="badge b-legacy">Legacy</span>`:''}
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div class="mouse-stats">Free:${mFree} Res:${mRes} Used:${mUsed}</div>
+            ${isMOpen?`<div class="adj-line">${adj}</div>`:''}
+          </div>
+        </div>
+        ${isMOpen?`<div class="mouse-body">${batchHTML}${mouse.notes?`<div style="font-size:11px;color:var(--text2);margin-top:6px">${mouse.notes}</div>`:''}</div>`:''}
+      </div>`;
     });
 
-    expCards += `<div class="exp-card">
-      <div class="exp-header">
+    expHTML += `<div class="exp-block">
+      <div class="exp-header" data-exp="${exp.id}">
         <div>
-          <div class="exp-id">${exp.id}</div>
-          <div class="exp-name">${exp.name||''}</div>
-          <div class="exp-meta">Tissue: ${exp.tissueDate||'—'} · Age: ${exp.takedownAge||'—'}${exp.sectioningDate?' · Sectioned: '+exp.sectioningDate:''}</div>
-          <div class="badges">
-            <span class="badge badge-organ">${exp.organ}</span>
-            ${exp.depleted==='true'||exp.depleted===true ? `<span class="badge badge-depleted">Depleted</span>` : ''}
-            ${exp.legacy==='true'||exp.legacy===true ? `<span class="badge badge-legacy">Legacy</span>` : ''}
-          </div>
-          <div class="adj-line">Free: ${sFree} · Reserved: ${sRes} · Used: ${sUsed} · Adj: ${adj}</div>
+          <div class="exp-title">${exp.id}${exp.name?' — '+exp.name:''}</div>
+          ${exp.description?`<div class="exp-desc">${exp.description}</div>`:''}
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Free:${eFree} · Res:${eRes} · Used:${eUsed} · Mice:${expMice.length}</div>
         </div>
-        <div style="font-size:11px;color:var(--c-text-3);max-width:180px;text-align:right;line-height:1.5">${exp.stainingPlan||''}<br>${exp.notes||''}</div>
+        <span class="exp-chevron ${isOpen?'open':''}">${SVG.chevron}</span>
       </div>
-      ${batchHTML}
+      ${isOpen?`<div class="exp-body">${miceHTML||'<div class="empty" style="padding:1.5rem">No mice yet.</div>'}</div>`:''}
     </div>`;
   });
 
-  if (!expCards) expCards = `<div class="empty">No experiments match your filters. ${S.isAdmin ? 'Add one with the button above.' : 'Ask an admin to add experiments.'}</div>`;
+  if (!expHTML) expHTML = `<div class="empty">No experiments found. ${S.isAdmin?'Add one above.':'Ask an admin to add experiments.'}</div>`;
 
   return `
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-val" style="color:var(--c-green)">${totalFree}</div><div class="stat-lbl">Free blanks</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--c-amber)">${totalRes}</div><div class="stat-lbl">Reserved</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--c-text-3)">${totalUsed}</div><div class="stat-lbl">Used</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${totalFree}</div><div class="stat-lbl">Free blanks</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${totalRes}</div><div class="stat-lbl">Reserved</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--text3)">${totalUsed}</div><div class="stat-lbl">Used</div></div>
     <div class="stat-card"><div class="stat-val">${experiments.length}</div><div class="stat-lbl">Experiments</div></div>
+    <div class="stat-card"><div class="stat-val">${mice.length}</div><div class="stat-lbl">Mice</div></div>
   </div>
   <div class="legend">
     <div class="legend-item"><div class="leg-dot leg-free"></div>Free</div>
@@ -599,421 +453,370 @@ function renderInventoryHTML() {
     <div class="legend-item"><div class="leg-dot leg-used"></div>Used</div>
   </div>
   <div class="filters">
-    <input id="flt-search" placeholder="Search…" value="${search}" style="width:160px"/>
-    <select id="flt-organ">
-      <option value="all">All organs</option>
-      ${organs.map(o=>`<option value="${o}" ${organ===o?'selected':''}>${o}</option>`).join('')}
-    </select>
+    <input id="flt-search" placeholder="Search…" value="${search}" style="width:200px"/>
+    <select id="flt-organ"><option value="all">All organs</option>${organs.map(o=>`<option value="${o}" ${organ===o?'selected':''}>${o}</option>`).join('')}</select>
     <select id="flt-status">
       <option value="all" ${status==='all'?'selected':''}>All status</option>
       <option value="free" ${status==='free'?'selected':''}>Free only</option>
       <option value="reserved" ${status==='reserved'?'selected':''}>Reserved</option>
       <option value="used" ${status==='used'?'selected':''}>Used</option>
     </select>
-    ${S.isAdmin ? `<button class="btn btn-sm btn-primary" id="btn-add-exp">${icon.plus} Experiment</button>` : ''}
-    ${S.isAdmin ? `<button class="btn btn-sm" id="btn-add-batch">${icon.plus} Batch / slides</button>` : ''}
+    ${S.isAdmin?`<button class="btn btn-sm btn-primary" id="btn-add-exp">${SVG.plus} Experiment</button>`:''}
+    ${S.isAdmin?`<button class="btn btn-sm" id="btn-add-mouse">${SVG.plus} Mouse</button>`:''}
+    ${S.isAdmin?`<button class="btn btn-sm" id="btn-add-batch">${SVG.plus} Batch</button>`:''}
   </div>
-  ${expCards}`;
+  ${expHTML}`;
 }
 
 function renderLogHTML() {
   const log = [...S.data.usageLog].reverse();
   if (!log.length) return `<div class="empty">No usage history yet.</div>`;
-  return `<div>` + log.map(l => {
-    const cls = l.action==='used' ? 'log-used' : l.action==='reserved' ? 'log-reserved' : 'log-released';
-    const label = l.action==='used' ? '● Used' : l.action==='reserved' ? '◐ Reserved' : '○ Released';
+  return `<div>`+log.map(l=>{
+    const cls=l.action==='used'?'log-used':l.action==='reserved'?'log-reserved':'log-released';
+    const icon=l.action==='used'?'●':l.action==='reserved'?'◐':'○';
     return `<div class="log-item">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <span class="log-id">${l.expId||'?'} · ${l.batch!==''?'B'+l.batch:'legacy'} · S${l.slideNum||'?'}</span>
-        <span style="font-size:11px;color:var(--c-text-3)">${l.timestamp}</span>
+        <span style="font-family:var(--mono);font-size:12px">${l.mouseId||'?'} · ${l.batch?'B'+l.batch:'legacy'} · S${l.slideNum||'?'}</span>
+        <span style="font-size:11px;color:var(--text3)">${l.timestamp}</span>
       </div>
       <div style="margin-top:2px;font-size:13px">
-        <span class="log-action ${cls}">${label}</span>
-        <span style="color:var(--c-text-2)"> by <strong>${l.user||'?'}</strong> — ${l.details||''}</span>
+        <span class="${cls}" style="font-weight:700">${icon} ${l.action}</span>
+        <span style="color:var(--text2)"> by <strong>${l.user||'?'}</strong>${l.details?' — '+l.details:''}</span>
       </div>
     </div>`;
-  }).join('') + `</div>`;
+  }).join('')+'</div>';
 }
 
-// ── Modals ───────────────────────────────────────────────────────────────
+// ── Modals ────────────────────────────────────────────────────────────────
 function showModal(html) {
   document.getElementById('modal-area').innerHTML = `<div class="overlay" id="overlay">${html}</div>`;
-  document.getElementById('overlay').addEventListener('click', e => { if(e.target.id==='overlay') closeModal(); });
+  document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeModal(); });
 }
-function closeModal() {
-  document.getElementById('modal-area').innerHTML = '';
-  S.selectedSlide = null;
-}
+function closeModal() { document.getElementById('modal-area').innerHTML = ''; }
 
-function modalSlideAction(sl) {
-  const exp = S.data.experiments.find(e => e.id === sl.expId);
-  const slideRef = `${sl.expId} · ${sl.batch!==null?'Batch '+sl.batch:'Legacy'} · Slide ${sl.slideNum}`;
-  const isFree = sl.status === 'free';
-  const isReserved = sl.status === 'reserved';
-  const isUsed = sl.status === 'used';
+function modalSlide(sl) {
+  const ref = `${sl.mouseId} · ${sl.batch!==null?'Batch '+sl.batch:'Legacy'} · Slide ${sl.slideNum}`;
+  const isFree = sl.status==='free', isReserved = sl.status==='reserved';
+  const rows = [
+    ['Status',`<span class="pill pill-${sl.status}">${sl.status}</span>`],
+    sl.usedBy?['By',sl.usedBy]:null,
+    sl.stainType?['Stain type',sl.stainType]:null,
+    sl.antibody?['Antibody/Probe',sl.antibody]:null,
+    sl.protocolVer?['Protocol ver.',sl.protocolVer]:null,
+    sl.usedFor?['Purpose',sl.usedFor]:null,
+    sl.dateUsed?['Date used',sl.dateUsed]:null,
+    sl.notes?['Notes',sl.notes]:null,
+  ].filter(Boolean).map(([l,v])=>`<div class="detail-row"><span class="detail-lbl">${l}</span><span>${v}</span></div>`).join('');
 
-  const detailRows = [
-    ['Status', `<span class="status-pill pill-${sl.status}">${sl.status}</span>`],
-    sl.usedBy ? ['By', sl.usedBy] : null,
-    sl.stainType ? ['Stain type', sl.stainType] : null,
-    sl.antibody ? ['Antibody / Probe', sl.antibody] : null,
-    sl.protocolVer ? ['Protocol version', sl.protocolVer] : null,
-    sl.usedFor ? ['Purpose', sl.usedFor] : null,
-    sl.dateUsed ? ['Date used', sl.dateUsed] : null,
-    sl.notes ? ['Notes', sl.notes] : null,
-  ].filter(Boolean).map(([l,v]) => `<div class="detail-row"><span class="detail-lbl">${l}</span><span>${v}</span></div>`).join('');
-
-  const actionForm = isFree ? `
-    <div class="form-row"><label>Your name *</label><input id="act-user" placeholder="e.g. Naman" value="${S.user?.name||''}"/></div>
-    <div class="form-row"><label>Stain type</label>
-      <select id="act-stain"><option value="">— select —</option><option>ISH</option><option>IHC</option><option>H&E</option><option>AB-PAS</option><option>Other</option></select>
+  const form = isFree ? `
+    <div class="form-row"><label>Your name *</label><input id="a-user" value="${S.user?.name||''}"/></div>
+    <div class="form-2col">
+      <div class="form-row"><label>Stain type</label><select id="a-stain"><option value="">—</option><option>ISH</option><option>IHC</option><option>H&amp;E</option><option>AB-PAS</option><option>Other</option></select></div>
+      <div class="form-row"><label>Protocol ver.</label><input id="a-protocol" placeholder="v1"/></div>
     </div>
-    <div class="form-row"><label>Antibody / Probe</label><input id="act-antibody" placeholder="e.g. Hmgcs2, Oxct1"/></div>
-    <div class="form-row"><label>Protocol version</label><input id="act-protocol" placeholder="e.g. v1, v2.1"/></div>
-    <div class="form-row"><label>Purpose / notes</label><textarea id="act-notes" placeholder="What experiment or staining run is this for?"></textarea></div>
+    <div class="form-row"><label>Antibody / Probe</label><input id="a-antibody" placeholder="e.g. Hmgcs2"/></div>
+    <div class="form-row"><label>Purpose / notes</label><textarea id="a-notes" placeholder="What staining run is this for?"></textarea></div>
     <div class="modal-btns">
       <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn" id="btn-do-reserve">Reserve</button>
-      <button class="btn btn-primary" id="btn-do-use">Mark as used</button>
+      <button class="btn" id="btn-reserve">Reserve</button>
+      <button class="btn btn-primary" id="btn-use">Mark used</button>
     </div>` :
   isReserved ? `
-    <div class="form-row"><label>Your name</label><input id="act-user" value="${sl.usedBy||S.user?.name||''}"/></div>
+    <div class="form-row"><label>Your name</label><input id="a-user" value="${sl.usedBy||S.user?.name||''}"/></div>
     <div class="modal-btns">
       <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-danger" id="btn-do-release">Release reservation</button>
-      <button class="btn btn-primary" id="btn-do-use">Mark as used now</button>
+      <button class="btn btn-danger" id="btn-release">Release reservation</button>
+      <button class="btn btn-primary" id="btn-use">Mark used now</button>
     </div>` :
   `<div class="modal-btns"><button class="btn" onclick="closeModal()">Close</button></div>`;
 
-  showModal(`<div class="modal">
-    <h3>Slide details</h3>
-    <div class="modal-slide-id">${slideRef}</div>
-    <div class="detail-box">${detailRows}</div>
-    ${actionForm}
-  </div>`);
-
-  if (isFree || isReserved) {
-    document.getElementById('btn-do-use')?.addEventListener('click', () => doUseSlide(sl));
-    document.getElementById('btn-do-reserve')?.addEventListener('click', () => doReserveSlide(sl));
-    document.getElementById('btn-do-release')?.addEventListener('click', () => doReleaseSlide(sl));
-  }
+  showModal(`<div class="modal"><h3>Slide details</h3><div class="slide-ref">${ref}</div><div class="detail-box">${rows}</div>${form}</div>`);
+  document.getElementById('btn-use')?.addEventListener('click',()=>doUse(sl));
+  document.getElementById('btn-reserve')?.addEventListener('click',()=>doReserve(sl));
+  document.getElementById('btn-release')?.addEventListener('click',()=>doRelease(sl));
 }
 
 function modalAddExp() {
-  showModal(`<div class="modal">
-    <h3>Add experiment</h3>
-    <div class="info-box"><strong>ID format:</strong> e.g. <code>Exp57#1-SI</code> or <code>PGF2#3-Col</code> — include animal number and organ.</div>
-    <div class="form-row"><label>Experiment ID *</label><input id="ae-id" placeholder="Exp57#1-SI"/></div>
-    <div class="form-row"><label>Full description</label><input id="ae-name" placeholder="Exp 57 Naive P14 Male"/></div>
-    <div class="form-row"><label>Organ</label>
-      <select id="ae-organ"><option>SI</option><option>Liver</option><option>Col</option><option>GF</option><option>Other</option></select>
-    </div>
-    <div class="form-row"><label>Takedown age</label><input id="ae-age" placeholder="P14"/></div>
-    <div class="form-row"><label>Tissue collection date</label><input id="ae-tissue-date" type="date"/></div>
-    <div class="form-row"><label>Date sent for sectioning</label><input id="ae-sec-date" type="date"/></div>
-    <div class="form-row"><label>Staining plan</label><input id="ae-stain" placeholder="Hmgcs2 ISH, OLFM4 IHC, AB-PAS"/></div>
-    <div class="form-row">
-      <label class="form-check"><input type="checkbox" id="ae-depleted"> Depleted (block used up — no more sectioning)</label>
-    </div>
-    <div class="form-row">
-      <label class="form-check"><input type="checkbox" id="ae-legacy"> Legacy (no batch numbers available)</label>
-    </div>
-    <div class="form-row"><label>Notes</label><textarea id="ae-notes"></textarea></div>
-    <div class="modal-btns">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" id="btn-save-exp">Save experiment</button>
-    </div>
+  showModal(`<div class="modal"><h3>Add experiment</h3>
+    <div class="info-box">Use just the experiment number here, e.g. <strong>Exp39</strong>. Mice and organs are added separately.</div>
+    <div class="form-row"><label>Experiment ID *</label><input id="e-id" placeholder="Exp57"/></div>
+    <div class="form-row"><label>Short name</label><input id="e-name" placeholder="Naive P14 cohort"/></div>
+    <div class="form-row"><label>Description</label><textarea id="e-desc" placeholder="Purpose, project, PI, etc."></textarea></div>
+    <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-save-exp">Save</button></div>
   </div>`);
   document.getElementById('btn-save-exp').addEventListener('click', doAddExp);
 }
 
-function modalAddBatch() {
-  const exps = S.data.experiments;
-  showModal(`<div class="modal">
-    <h3>Add batch / slides</h3>
+function modalAddMouse() {
+  if (!S.data.experiments.length) { alert('Add an experiment first.'); return; }
+  showModal(`<div class="modal"><h3>Add mouse</h3>
+    <div class="info-box">ID will be generated as <strong>ExpID#N-Organ</strong>, e.g. <strong>Exp39#2-SI</strong></div>
     <div class="form-row"><label>Experiment *</label>
-      <select id="ab-exp">${exps.map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('')}</select>
+      <select id="m-exp">${S.data.experiments.map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('')}</select>
     </div>
-    <div class="form-row"><label>Batch number (leave blank for legacy)</label><input id="ab-batch" type="number" placeholder="e.g. 3" min="1"/></div>
-    <div class="form-row"><label>Date requested for sectioning</label><input id="ab-reqdate" type="date"/></div>
-    <div class="form-row"><label>Number of slides in this batch *</label><input id="ab-count" type="number" placeholder="e.g. 5" min="1" max="200"/></div>
-    <div class="modal-btns">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" id="btn-save-batch">Add slides</button>
+    <div class="form-2col">
+      <div class="form-row"><label>Mouse # *</label><input id="m-num" type="number" placeholder="1" min="1"/></div>
+      <div class="form-row"><label>Organ *</label><select id="m-organ"><option>SI</option><option>Liver</option><option>Col</option><option>GF</option><option>Other</option></select></div>
     </div>
+    <div class="form-2col">
+      <div class="form-row"><label>Gender</label><select id="m-gender"><option value="">—</option><option>M</option><option>F</option></select></div>
+      <div class="form-row"><label>Weight at takedown (g)</label><input id="m-weight" type="number" placeholder="25.3" step="0.1"/></div>
+    </div>
+    <div class="form-2col">
+      <div class="form-row"><label>Takedown age</label><input id="m-age" placeholder="P14"/></div>
+      <div class="form-row"><label>Breeder no.</label><input id="m-breeder" placeholder="B123"/></div>
+    </div>
+    <div class="form-2col">
+      <div class="form-row"><label>Tissue collection date</label><input id="m-tissue" type="date"/></div>
+      <div class="form-row"><label>Sectioning request date</label><input id="m-section" type="date"/></div>
+    </div>
+    <div class="form-row" style="display:flex;gap:20px">
+      <label class="form-check"><input type="checkbox" id="m-depleted"> Depleted</label>
+      <label class="form-check"><input type="checkbox" id="m-legacy"> Legacy</label>
+    </div>
+    <div class="form-row"><label>Notes</label><textarea id="m-notes"></textarea></div>
+    <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-save-mouse">Save mouse</button></div>
+  </div>`);
+  document.getElementById('btn-save-mouse').addEventListener('click', doAddMouse);
+}
+
+function modalAddBatch() {
+  if (!S.data.mice.length) { alert('Add a mouse first.'); return; }
+  showModal(`<div class="modal"><h3>Add batch / slides</h3>
+    <div class="form-row"><label>Mouse *</label>
+      <select id="b-mouse">${S.data.mice.map(m=>`<option value="${m.id}">${m.id}</option>`).join('')}</select>
+    </div>
+    <div class="form-2col">
+      <div class="form-row"><label>Batch number (blank = legacy)</label><input id="b-num" type="number" placeholder="3" min="1"/></div>
+      <div class="form-row"><label>Sectioning request date</label><input id="b-date" type="date"/></div>
+    </div>
+    <div class="form-row"><label>Number of slides *</label><input id="b-count" type="number" placeholder="5" min="1" max="200"/></div>
+    <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-save-batch">Add slides</button></div>
   </div>`);
   document.getElementById('btn-save-batch').addEventListener('click', doAddBatch);
 }
 
-function modalAdminPin() {
-  showModal(`<div class="modal">
-    <h3>Admin access</h3>
-    <p style="font-size:13px;color:var(--c-text-2);margin-bottom:1rem">Enter the lab admin PIN to unlock experiment and batch management.</p>
-    <div class="form-row"><label>PIN</label><input class="pin-field" id="pin-inp" type="password" maxlength="12" autofocus/></div>
-    <div class="modal-btns">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" id="btn-pin-ok">Unlock</button>
-    </div>
+function modalPin() {
+  showModal(`<div class="modal"><h3>Admin access</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Enter the lab admin PIN.</p>
+    <div class="form-row"><label>PIN</label><input class="pin-field" id="pin" type="password" maxlength="12" autofocus/></div>
+    <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-pin-ok">Unlock</button></div>
   </div>`);
-  document.getElementById('btn-pin-ok').addEventListener('click', () => {
-    if (document.getElementById('pin-inp').value === CONFIG.ADMIN_PIN) {
-      S.isAdmin = true; closeModal(); render();
-    } else {
-      document.getElementById('pin-inp').value = '';
-      document.getElementById('pin-inp').placeholder = 'Wrong PIN, try again';
-    }
-  });
-  document.getElementById('pin-inp').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('btn-pin-ok').click();
-  });
+  const ok = () => {
+    if (document.getElementById('pin').value === CONFIG.ADMIN_PIN) { S.isAdmin=true; closeModal(); render(); }
+    else { const el=document.getElementById('pin'); el.value=''; el.placeholder='Wrong PIN, try again'; }
+  };
+  document.getElementById('btn-pin-ok').addEventListener('click', ok);
+  document.getElementById('pin').addEventListener('keydown', e=>{ if(e.key==='Enter') ok(); });
 }
 
-// ── Data mutations ────────────────────────────────────────────────────────
-function today() { return new Date().toISOString().split('T')[0]; }
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+// ── Mutations ─────────────────────────────────────────────────────────────
+const today = () => new Date().toISOString().split('T')[0];
+const uid   = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+
+async function persist(fn) {
+  S.saving=true; render();
+  try { await fn(); } catch(e) { S.error='Sheet sync error: '+e.message; }
+  S.saving=false; render();
+}
 
 async function doAddExp() {
-  const id = document.getElementById('ae-id')?.value.trim();
-  if (!id) { alert('Experiment ID is required'); return; }
-  const exp = {
-    id,
-    name: document.getElementById('ae-name')?.value.trim(),
-    organ: document.getElementById('ae-organ')?.value,
-    takedownAge: document.getElementById('ae-age')?.value.trim(),
-    tissueDate: document.getElementById('ae-tissue-date')?.value,
-    stainingPlan: document.getElementById('ae-stain')?.value.trim(),
-    depleted: document.getElementById('ae-depleted')?.checked ? 'true' : 'false',
-    legacy: document.getElementById('ae-legacy')?.checked ? 'true' : 'false',
-    sectioningDate: document.getElementById('ae-sec-date')?.value,
-    notes: document.getElementById('ae-notes')?.value.trim(),
-  };
+  const id = document.getElementById('e-id')?.value.trim();
+  if (!id) { alert('ID required'); return; }
+  if (S.data.experiments.find(e=>e.id===id)) { alert('ID already exists'); return; }
+  const exp = { id, name:document.getElementById('e-name')?.value.trim(), description:document.getElementById('e-desc')?.value.trim() };
   S.data.experiments.push(exp);
   closeModal(); render();
-  await saveRow(TAB.EXPERIMENTS, EXP_COLS, exp);
+  await persist(async () => { await appendRow(TAB.EXP, objToRow(COLS.EXP, exp)); });
+}
+
+async function doAddMouse() {
+  const expId=document.getElementById('m-exp')?.value;
+  const num=document.getElementById('m-num')?.value.trim();
+  const organ=document.getElementById('m-organ')?.value;
+  if (!num) { alert('Mouse number required'); return; }
+  const mouseId=`${expId}#${num}-${organ}`;
+  if (S.data.mice.find(m=>m.id===mouseId)) { alert(`${mouseId} already exists`); return; }
+  const mouse = {
+    id:mouseId, expId, mouseNum:num, organ,
+    breederNo:document.getElementById('m-breeder')?.value.trim(),
+    gender:document.getElementById('m-gender')?.value,
+    weightG:document.getElementById('m-weight')?.value.trim(),
+    takedownAge:document.getElementById('m-age')?.value.trim(),
+    tissueDate:document.getElementById('m-tissue')?.value,
+    sectioningDate:document.getElementById('m-section')?.value,
+    depleted:document.getElementById('m-depleted')?.checked?'true':'false',
+    legacy:document.getElementById('m-legacy')?.checked?'true':'false',
+    notes:document.getElementById('m-notes')?.value.trim(),
+  };
+  S.data.mice.push(mouse);
+  S.ui.expandedExps[expId]=true;
+  closeModal(); render();
+  await persist(async () => { await appendRow(TAB.MICE, objToRow(COLS.MICE, mouse)); });
 }
 
 async function doAddBatch() {
-  const expId = document.getElementById('ab-exp')?.value;
-  const batchRaw = document.getElementById('ab-batch')?.value.trim();
-  const batch = batchRaw === '' ? null : parseInt(batchRaw);
-  const count = parseInt(document.getElementById('ab-count')?.value) || 0;
-  if (!count) { alert('Number of slides is required'); return; }
-
-  const existing = S.data.slides.filter(s => s.expId === expId && s.batch === batch);
-  const startNum = existing.length + 1;
-  const newSlides = [];
-  for (let i = 0; i < count; i++) {
-    const sl = {
-      id: uid(), expId, batch: batch === null ? '' : batch,
-      slideNum: startNum + i, status: 'free',
-      usedBy: '', usedFor: '', stainType: '', antibody: '', protocolVer: '', dateUsed: '', notes: '',
-    };
+  const mouseId=document.getElementById('b-mouse')?.value;
+  const batchRaw=document.getElementById('b-num')?.value.trim();
+  const batch=batchRaw===''?null:parseInt(batchRaw);
+  const count=parseInt(document.getElementById('b-count')?.value)||0;
+  if (!count) { alert('Number of slides required'); return; }
+  const existing=S.data.slides.filter(s=>s.mouseId===mouseId&&s.batch===batch);
+  const startNum=existing.length+1;
+  const newSlides=[];
+  for (let i=0;i<count;i++) {
+    const sl={ id:uid(), mouseId, batch:batch===null?'':String(batch), slideNum:startNum+i,
+      status:'free', usedBy:'', usedFor:'', stainType:'', antibody:'', protocolVer:'', dateUsed:'', notes:'' };
     newSlides.push(sl);
     S.data.slides.push({...sl, batch});
   }
-  buildSlideRowMap();
+  const mouse=S.data.mice.find(m=>m.id===mouseId);
+  if (mouse) { S.ui.expandedExps[mouse.expId]=true; S.ui.expandedMice[mouseId]=true; }
   closeModal(); render();
-
-  S.saving = true;
-  try {
-    for (const sl of newSlides) await saveRow(TAB.SLIDES, SLIDE_COLS, sl);
-  } catch(e) { S.error = 'Failed to save to sheet: ' + e.message; }
-  S.saving = false; render();
+  await persist(async () => {
+    for (const sl of newSlides) await appendRow(TAB.SLIDES, objToRow(COLS.SLIDES, sl));
+    // Reload to get accurate row map for future edits
+    S.data = await loadAllData();
+    render();
+  });
 }
 
-async function doUseSlide(sl) {
-  const user = document.getElementById('act-user')?.value.trim();
+function makeLog(sl, action, user, details) {
+  return { timestamp:today(), slideId:sl.id, action, user, mouseId:sl.mouseId,
+    batch:sl.batch!==null?String(sl.batch):'legacy', slideNum:String(sl.slideNum),
+    details:details.filter(Boolean).join(' · ') };
+}
+
+async function syncSlide(sl) {
+  const rowIdx=S.slideRowMap[sl.id];
+  if (!rowIdx) { console.warn('No row for', sl.id); return; }
+  await updateSheetRow(TAB.SLIDES, rowIdx, objToRow(COLS.SLIDES, {...sl, batch:sl.batch!==null?String(sl.batch):'', slideNum:String(sl.slideNum)}));
+}
+
+async function doUse(sl) {
+  const user=document.getElementById('a-user')?.value.trim();
   if (!user) { alert('Please enter your name'); return; }
-  const stainType = document.getElementById('act-stain')?.value || sl.stainType;
-  const antibody = document.getElementById('act-antibody')?.value || sl.antibody;
-  const protocolVer = document.getElementById('act-protocol')?.value || sl.protocolVer;
-  const usedFor = document.getElementById('act-notes')?.value || sl.usedFor;
-  const dateUsed = today();
-
-  Object.assign(sl, { status:'used', usedBy:user, stainType, antibody, protocolVer, usedFor, dateUsed });
-
-  const logEntry = {
-    timestamp: dateUsed, slideId: sl.id, action: 'used', user,
-    expId: sl.expId, batch: sl.batch!==null ? sl.batch : 'legacy',
-    slideNum: sl.slideNum, details: [stainType, antibody, protocolVer, usedFor].filter(Boolean).join(' · '),
-  };
-  S.data.usageLog.push(logEntry);
+  const stainType=document.getElementById('a-stain')?.value||sl.stainType;
+  const antibody=document.getElementById('a-antibody')?.value||sl.antibody;
+  const protocolVer=document.getElementById('a-protocol')?.value||sl.protocolVer;
+  const usedFor=document.getElementById('a-notes')?.value||sl.usedFor;
+  Object.assign(sl,{status:'used',usedBy:user,stainType,antibody,protocolVer,usedFor,dateUsed:today()});
+  const log=makeLog(sl,'used',user,[stainType,antibody,protocolVer,usedFor]);
+  S.data.usageLog.push(log);
   closeModal(); render();
-  await persistSlideAndLog(sl, logEntry);
+  await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
 }
 
-async function doReserveSlide(sl) {
-  const user = document.getElementById('act-user')?.value.trim();
+async function doReserve(sl) {
+  const user=document.getElementById('a-user')?.value.trim();
   if (!user) { alert('Please enter your name'); return; }
-  const stainType = document.getElementById('act-stain')?.value;
-  const antibody = document.getElementById('act-antibody')?.value;
-  const protocolVer = document.getElementById('act-protocol')?.value;
-  const usedFor = document.getElementById('act-notes')?.value;
-
-  Object.assign(sl, { status:'reserved', usedBy:user, stainType, antibody, protocolVer, usedFor });
-
-  const logEntry = {
-    timestamp: today(), slideId: sl.id, action: 'reserved', user,
-    expId: sl.expId, batch: sl.batch!==null ? sl.batch : 'legacy',
-    slideNum: sl.slideNum, details: [stainType, antibody, protocolVer, usedFor].filter(Boolean).join(' · '),
-  };
-  S.data.usageLog.push(logEntry);
+  const stainType=document.getElementById('a-stain')?.value;
+  const antibody=document.getElementById('a-antibody')?.value;
+  const protocolVer=document.getElementById('a-protocol')?.value;
+  const usedFor=document.getElementById('a-notes')?.value;
+  Object.assign(sl,{status:'reserved',usedBy:user,stainType,antibody,protocolVer,usedFor});
+  const log=makeLog(sl,'reserved',user,[stainType,antibody,protocolVer,usedFor]);
+  S.data.usageLog.push(log);
   closeModal(); render();
-  await persistSlideAndLog(sl, logEntry);
+  await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
 }
 
-async function doReleaseSlide(sl) {
-  const user = document.getElementById('act-user')?.value.trim() || sl.usedBy;
-  Object.assign(sl, { status:'free', usedBy:'', usedFor:'', stainType:'', antibody:'', protocolVer:'', dateUsed:'', notes:'' });
-
-  const logEntry = {
-    timestamp: today(), slideId: sl.id, action: 'released', user,
-    expId: sl.expId, batch: sl.batch!==null ? sl.batch : 'legacy',
-    slideNum: sl.slideNum, details: 'Reservation released',
-  };
-  S.data.usageLog.push(logEntry);
+async function doRelease(sl) {
+  const user=document.getElementById('a-user')?.value.trim()||sl.usedBy;
+  const log=makeLog(sl,'released',user,['Reservation released']);
+  Object.assign(sl,{status:'free',usedBy:'',usedFor:'',stainType:'',antibody:'',protocolVer:'',dateUsed:'',notes:''});
+  S.data.usageLog.push(log);
   closeModal(); render();
-  await persistSlideAndLog(sl, logEntry);
-}
-
-async function persistSlideAndLog(sl, logEntry) {
-  S.saving = true; render();
-  try {
-    const rowIdx = S.slideRowMap[sl.id];
-    if (rowIdx) {
-      await updateRow(TAB.SLIDES, rowIdx, objToRow(SLIDE_COLS, {
-        ...sl, batch: sl.batch !== null ? sl.batch : '',
-      }));
-    }
-    await saveRow(TAB.LOG, LOG_COLS, logEntry);
-  } catch(e) {
-    S.error = 'Sheet sync failed: ' + e.message + '. Local state updated but sheet may be out of sync.';
-  }
-  S.saving = false; render();
-}
-
-async function saveRow(tab, cols, obj) {
-  const row = objToRow(cols, obj);
-  await appendRow(tab, row);
+  await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
 }
 
 // ── Export ────────────────────────────────────────────────────────────────
 function doExport() {
-  const dump = JSON.stringify(S.data, null, 0);
-  const script = `#!/usr/bin/env python3
-# SlideTrack pretty-printer
-# Usage: python3 pretty_print.py dump.json
-import json, sys
+  const dump=JSON.stringify(S.data,null,0);
+  const script=`#!/usr/bin/env python3
+# SlideTrack pretty-printer — Usage: python3 pretty_print.py dump.json
+import json,sys
 from datetime import datetime
-
-with open(sys.argv[1]) as f:
-    db = json.load(f)
-
-exps  = {e['id']: e for e in db['experiments']}
-slides = {s['id']: s for s in db['slides']}
-
-print("=" * 72)
-print(f"SLIDETRACK INVENTORY DUMP — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-print("=" * 72)
-
-for e in db['experiments']:
-    eid = e['id']
-    sl  = [s for s in db['slides'] if s['expId'] == eid]
-    free = sum(1 for s in sl if s['status'] == 'free')
-    res  = sum(1 for s in sl if s['status'] == 'reserved')
-    used = sum(1 for s in sl if s['status'] == 'used')
-    flags = []
-    if e.get('depleted') == 'true': flags.append('DEPLETED')
-    if e.get('legacy')   == 'true': flags.append('LEGACY')
-    flag_str = (' [' + ', '.join(flags) + ']') if flags else ''
-    print(f"\\n{'─'*72}")
-    print(f"  {eid}{flag_str}")
-    print(f"  {e.get('name','')}")
-    print(f"  Organ: {e.get('organ','')}  Age: {e.get('takedownAge','')}  Tissue date: {e.get('tissueDate','')}")
-    print(f"  Staining plan: {e.get('stainingPlan','—')}")
-    if e.get('notes'): print(f"  Notes: {e['notes']}")
-    print(f"  Free: {free}  Reserved: {res}  Used: {used}")
-
-    batches = sorted(set(s['batch'] for s in sl), key=lambda x: (x == '' or x is None, x))
-    for b in batches:
-        bsl = sorted([s for s in sl if s['batch'] == b], key=lambda x: int(x['slideNum']))
-        blabel = 'legacy' if b in ('', None) else f'Batch {b}'
-        print(f"\\n    [{blabel}]")
-        for s in bsl:
-            info = ''
-            if s['status'] != 'free':
-                parts = [s.get('usedBy',''), s.get('stainType',''), s.get('antibody',''),
-                         s.get('protocolVer',''), s.get('dateUsed','')]
-                info = '  →  ' + '  '.join(p for p in parts if p)
-            print(f"      Slide {int(s['slideNum']):3d}  [{s['status'].upper():8s}]{info}")
-
-print("\\n" + "=" * 72)
-print("USAGE LOG (newest first)")
-print("=" * 72)
-for l in reversed(db.get('usageLog', [])):
-    sl = slides.get(l.get('slideId',''), {})
-    exp_id = l.get('expId', sl.get('expId','?'))
-    b  = l.get('batch', sl.get('batch','?'))
-    sn = l.get('slideNum', sl.get('slideNum','?'))
-    print(f"  {l.get('timestamp',''):12s}  {exp_id:20s}  B{b} S{sn:3}  {l.get('action','').upper():8s}  {l.get('user','?'):14s}  {l.get('details','')}")
+with open(sys.argv[1]) as f: db=json.load(f)
+slides={s['id']:s for s in db['slides']}
+print("="*72)
+print(f"SLIDETRACK DUMP — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+print("="*72)
+for exp in db['experiments']:
+    exp_mice=[m for m in db['mice'] if m['expId']==exp['id']]
+    all_sl=[s for s in db['slides'] if any(s['mouseId']==m['id'] for m in exp_mice)]
+    free=sum(1 for s in all_sl if s['status']=='free')
+    res=sum(1 for s in all_sl if s['status']=='reserved')
+    used=sum(1 for s in all_sl if s['status']=='used')
+    print(f"\\n{'='*72}")
+    print(f"EXPERIMENT: {exp['id']}  {exp.get('name','')}  |  Free:{free} Res:{res} Used:{used}")
+    if exp.get('description'): print(f"  {exp['description']}")
+    for mouse in exp_mice:
+        msl=[s for s in db['slides'] if s['mouseId']==mouse['id']]
+        flags=[f for f,v in [('DEPLETED',mouse.get('depleted')),('LEGACY',mouse.get('legacy'))] if v=='true']
+        meta=' '.join(filter(None,[mouse.get('gender',''),mouse.get('weightG','')+'g' if mouse.get('weightG') else '',mouse.get('takedownAge',''),'Breeder:'+mouse.get('breederNo','') if mouse.get('breederNo') else '']))
+        print(f"\\n  MOUSE: {mouse['id']}{'  ['+', '.join(flags)+']' if flags else ''}  |  {meta}")
+        print(f"  Tissue:{mouse.get('tissueDate','—')}  Sectioned:{mouse.get('sectioningDate','—')}")
+        for b in sorted(set(s['batch'] for s in msl),key=lambda x:(x in('','null',None),x)):
+            bsl=sorted([s for s in msl if s['batch']==b],key=lambda x:int(x['slideNum']))
+            print(f"    [{'legacy' if b in ('','null',None) else 'Batch '+str(b)}]")
+            for s in bsl:
+                info=''
+                if s['status']!='free':
+                    info='  →  '+' '.join(filter(None,[s.get('usedBy'),s.get('stainType'),s.get('antibody'),s.get('protocolVer'),s.get('dateUsed')]))
+                print(f"      Slide {int(s['slideNum']):3d}  [{s['status'].upper():8s}]{info}")
+print("\\n"+"="*72+"\\nUSAGE LOG (newest first)\\n"+"="*72)
+for l in reversed(db.get('usageLog',[])):
+    print(f"  {l.get('timestamp',''):12}  {l.get('mouseId','?'):22}  B{l.get('batch','?'):3}  S{l.get('slideNum','?'):3}  {l.get('action','').upper():8}  {l.get('user','?'):14}  {l.get('details','')}")
 `;
-
-  [['dump.json', dump], ['pretty_print.py', script]].forEach(([name, content]) => {
-    const b = new Blob([content], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(b);
-    a.download = name;
-    a.click();
+  [['dump.json',dump],['pretty_print.py',script]].forEach(([name,content])=>{
+    const b=new Blob([content],{type:'text/plain'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(b);a.download=name;a.click();
   });
 }
 
-// ── Event binding ─────────────────────────────────────────────────────────
+// ── Events ────────────────────────────────────────────────────────────────
 function bindMain() {
-  const on = (id, fn) => document.getElementById(id)?.addEventListener('click', fn);
-  on('btn-refresh', async () => {
-    S.loading = true; renderTab();
-    S.data = await loadData(); buildSlideRowMap();
-    S.loading = false; renderTab();
+  const on=(id,fn)=>document.getElementById(id)?.addEventListener('click',fn);
+  on('btn-refresh', async()=>{
+    S.loading=true; renderTab();
+    try { S.data=await loadAllData(); } catch(e) { S.error=e.message; }
+    S.loading=false; renderTab();
   });
-  on('btn-admin', () => { if (S.isAdmin) { S.isAdmin = false; render(); } else modalAdminPin(); });
+  on('btn-admin',()=>{ S.isAdmin?(S.isAdmin=false,render()):modalPin(); });
   on('btn-export', doExport);
-  on('btn-signout', () => { gToken = null; S.user = null; S.isAdmin = false; S.view = 'signin'; render(); });
-  document.querySelectorAll('[data-tab]').forEach(el =>
-    el.addEventListener('click', () => { S.tab = el.dataset.tab; renderTab(); bindMain(); })
-  );
+  on('btn-signout',()=>{ gToken=null;S.user=null;S.isAdmin=false;S.view='signin';render(); });
+  document.querySelectorAll('[data-tab]').forEach(el=>el.addEventListener('click',()=>{ S.tab=el.dataset.tab; renderTab(); bindMain(); }));
 }
 
 function bindTab() {
-  document.querySelectorAll('[data-slide]').forEach(el =>
-    el.addEventListener('click', () => {
-      const sl = S.data.slides.find(s => s.id === el.dataset.slide);
-      if (sl) { S.selectedSlide = sl; modalSlideAction(sl); }
-    })
-  );
-  document.getElementById('flt-search')?.addEventListener('input', e => {
-    S.filter.search = e.target.value;
-    document.getElementById('tab-content').innerHTML = renderInventoryHTML();
-    bindTab();
-  });
-  document.getElementById('flt-organ')?.addEventListener('change', e => {
-    S.filter.organ = e.target.value;
-    document.getElementById('tab-content').innerHTML = renderInventoryHTML();
-    bindTab();
-  });
-  document.getElementById('flt-status')?.addEventListener('change', e => {
-    S.filter.status = e.target.value;
-    document.getElementById('tab-content').innerHTML = renderInventoryHTML();
-    bindTab();
-  });
+  document.querySelectorAll('[data-exp]').forEach(el=>el.addEventListener('click',()=>{
+    const id=el.dataset.exp; S.ui.expandedExps[id]=!S.ui.expandedExps[id];
+    document.getElementById('tab-content').innerHTML=renderInventoryHTML(); bindTab();
+  }));
+  document.querySelectorAll('[data-mouse]').forEach(el=>el.addEventListener('click',()=>{
+    const id=el.dataset.mouse; S.ui.expandedMice[id]=!S.ui.expandedMice[id];
+    document.getElementById('tab-content').innerHTML=renderInventoryHTML(); bindTab();
+  }));
+  document.querySelectorAll('[data-slide]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    const sl=S.data.slides.find(s=>s.id===el.dataset.slide);
+    if(sl) modalSlide(sl);
+  }));
+  const refilter=()=>{ document.getElementById('tab-content').innerHTML=renderInventoryHTML(); bindTab(); };
+  document.getElementById('flt-search')?.addEventListener('input',e=>{ S.filter.search=e.target.value; refilter(); });
+  document.getElementById('flt-organ')?.addEventListener('change',e=>{ S.filter.organ=e.target.value; refilter(); });
+  document.getElementById('flt-status')?.addEventListener('change',e=>{ S.filter.status=e.target.value; refilter(); });
   document.getElementById('btn-add-exp')?.addEventListener('click', modalAddExp);
+  document.getElementById('btn-add-mouse')?.addEventListener('click', modalAddMouse);
   document.getElementById('btn-add-batch')?.addEventListener('click', modalAddBatch);
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────
-if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
+if (window.location.hash) history.replaceState(null,'',window.location.pathname+window.location.search);
+window.addEventListener('load',()=>{ if(window.google) initTokenClient(); });
 render();
-// Pre-init token client once GIS script loads
-window.addEventListener('load', () => { if (window.google) initTokenClient(); });
 </script>
 </body>
 </html>
