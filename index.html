@@ -441,6 +441,7 @@ function initTokenClient() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
     scope: SCOPES,
+    prompt: 'select_account',
     callback: async (tokenResponse) => {
       if (tokenResponse.error) {
         S.error = 'Auth error: ' + tokenResponse.error;
@@ -1009,7 +1010,10 @@ function bindTab() {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────
+if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
 render();
+// Pre-init token client once GIS script loads
+window.addEventListener('load', () => { if (window.google) initTokenClient(); });
 </script>
 </body>
 </html>
