@@ -357,7 +357,7 @@ function renderInventoryHTML() {
   const totalUsed = slides.filter(s=>s.status==='used').length;
   const organs = [...new Set(mice.map(m=>m.organ))].filter(Boolean);
 
-  let exps = experiments;
+  let exps = [...experiments].sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}));
   if (search) exps = exps.filter(e =>
     e.id.toLowerCase().includes(search.toLowerCase()) ||
     (e.name||'').toLowerCase().includes(search.toLowerCase()) ||
@@ -367,7 +367,12 @@ function renderInventoryHTML() {
 
   let expHTML = '';
   exps.forEach(exp => {
-    const expMice = mice.filter(m=>m.expId===exp.id);
+    const expMice = mice.filter(m=>m.expId===exp.id)
+      .sort((a,b) => {
+        // Sort by mouseNum numerically, then by organ alphabetically
+        const nA = parseInt(a.mouseNum)||0, nB = parseInt(b.mouseNum)||0;
+        return nA !== nB ? nA - nB : a.organ.localeCompare(b.organ);
+      });
     const expSlides = slides.filter(s=>expMice.some(m=>m.id===s.mouseId));
     if (status!=='all' && !expSlides.some(s=>s.status===status)) return;
     const eFree=expSlides.filter(s=>s.status==='free').length;
