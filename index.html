@@ -12,9 +12,6 @@
   const CONFIG = {
   GOOGLE_CLIENT_ID: '1030491418042-a1gkskcfnnjgukmqdro0o4sememtoucu.apps.googleusercontent.com',
   WORKER_URL: 'https://twilight-frost-2dcb.nb3236.workers.dev',
-  // Allowed user emails — only these addresses can sign in
-  // Leave empty [] to allow any Google account
-  ALLOWED_EMAILS: ['nb3236@columbia.edu'],
 };
 </script>
 <!-- ============================================================ -->
@@ -349,20 +346,35 @@ function initTokenClient() {
     callback: async (resp) => {
       if (resp.error) { S.error = 'Auth error: ' + resp.error; render(); return; }
       gToken = resp.access_token;
-      let userEmail = '';
+      let userEmail = '', userInfo = null;
       try {
         const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers:{ Authorization:`Bearer ${gToken}` } });
-        const info = await r.json();
-        userEmail = info.email || '';
-        // Check allowed emails
-        if (CONFIG.ALLOWED_EMAILS.length > 0 && !CONFIG.ALLOWED_EMAILS.includes(userEmail)) {
-          S.view = 'signin';
-          document.getElementById('signin-err').innerHTML = `<div class="err-box" style="margin-top:1rem">Access denied. Your email (${userEmail}) is not on the allowed list. Contact your lab admin.</div>`;
-          gToken = null;
+        userInfo = await r.json();
+        userEmail = userInfo.email || '';
+      } catch(e) {
+        window.location.href = 'access-denied.html';
+        return;
+      }
+
+      // Check allow-list (lives server-side in the Worker's ALLOWED_EMAILS env var).
+      // Fail closed: if this check can't be completed, treat as not allowed.
+      try {
+        const accessResp = await fetch(`${CONFIG.WORKER_URL}/check-access`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: userEmail }),
+        });
+        const access = await accessResp.json();
+        if (!access.ok) {
+          window.location.href = 'access-denied.html';
           return;
         }
-        S.user = { name: info.name, email: userEmail, picture: info.picture };
-      } catch(e) { S.user = { name:'Lab member', email:'', picture:'' }; }
+      } catch(e) {
+        window.location.href = 'access-denied.html';
+        return;
+      }
+
+      S.user = { name: userInfo.name, email: userEmail, picture: userInfo.picture };
       S.view = 'app'; S.loading = true; render();
       try {
         S.data = await loadAllData();
