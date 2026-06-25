@@ -148,15 +148,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .info-box{background:var(--blue-bg);border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;color:var(--blue);margin-bottom:.85rem;line-height:1.6}
 .warn-box{background:var(--amber-bg);border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;color:var(--amber);margin-bottom:.85rem;line-height:1.6}
 .err-box{background:var(--red-bg);border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;color:var(--red);margin-bottom:.85rem}
-.log-item{border-bottom:1px solid var(--border);padding:.65rem 0}
-.log-item:last-child{border-bottom:none}
-.log-used{color:var(--red)}
-.log-reserved{color:var(--amber)}
-.log-released{color:var(--text3)}
-.log-missing{color:var(--purple)}
-.log-discarded{color:var(--slate)}
-.log-removed{color:var(--text3);font-style:italic}
-.log-edited{color:var(--blue)}
 .setup-wrap{max-width:480px;margin:3rem auto}
 .setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem}
 .setup-card h2{font-size:20px;font-weight:700;margin-bottom:.5rem}
@@ -444,7 +435,6 @@ function render() {
     <div class="tabs">
       <div class="tab ${S.tab==='inventory'?'active':''}" data-tab="inventory">Inventory</div>
       <div class="tab ${S.tab==='lookup'?'active':''}" data-tab="lookup">By stain</div>
-      <div class="tab ${S.tab==='log'?'active':''}" data-tab="log">Usage log</div>
     </div>
     <div id="tab-content"></div>
     <div id="modal-area"></div>`;
@@ -475,7 +465,7 @@ function renderTab() {
   if (S.loading) { el.innerHTML=`<div class="loader"><div class="spinner"></div> Loading from Google Sheets…</div>`; return; }
   let html = '';
   if (S.error) html += `<div class="err-box"><strong>Error:</strong> ${S.error} <button class="btn btn-sm" id="btn-dismiss">Dismiss</button></div>`;
-  html += S.tab==='inventory' ? renderInventoryHTML() : S.tab==='lookup' ? renderLookupHTML() : renderLogHTML();
+  html += S.tab==='inventory' ? renderInventoryHTML() : renderLookupHTML();
   el.innerHTML = html;
   document.getElementById('btn-dismiss')?.addEventListener('click', ()=>{ S.error=null; renderTab(); });
   bindTab();
@@ -626,27 +616,6 @@ function renderInventoryHTML() {
     ${S.isAdmin?`<button class="btn btn-sm" id="btn-add-batch">${SVG.plus} Batch</button>`:''}
   </div>
   ${expHTML}`;
-}
-
-function renderLogHTML() {
-  const log = [...S.data.usageLog].reverse();
-  if (!log.length) return `<div class="empty">No usage history yet.</div>`;
-  const colorMap = {used:'log-used',reserved:'log-reserved',released:'log-released',missing:'log-missing',discarded:'log-discarded',removed:'log-removed',edited:'log-edited'};
-  const iconMap  = {used:'●',reserved:'◐',released:'○',missing:'?',discarded:'✕',removed:'↩',edited:'✎'};
-  return `<div>`+log.map(l=>{
-    const cls = colorMap[l.action] || '';
-    const icon = iconMap[l.action] || '·';
-    return `<div class="log-item">
-      <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <span style="font-family:var(--mono);font-size:12px">${l.mouseId||'?'} · ${l.batch?'B'+l.batch:'legacy'} · S${l.slideNum||'?'}</span>
-        <span style="font-size:11px;color:var(--text3)">${l.timestamp}</span>
-      </div>
-      <div style="margin-top:2px;font-size:13px">
-        <span class="${cls}" style="font-weight:700">${icon} ${l.action}</span>
-        <span style="color:var(--text2)"> by <strong>${l.user||'?'}</strong>${l.details?' — '+l.details:''}</span>
-      </div>
-    </div>`;
-  }).join('')+'</div>';
 }
 
 // ── Lookup tab: browse/export by stain type + antibody ───────────────────
