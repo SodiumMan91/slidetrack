@@ -6,20 +6,22 @@
 <title>SlideTrack — Lab Slide Inventory</title>
 
 <!-- ============================================================
-  CONFIGURATION — fill in these 3 values before deploying
+  CONFIGURATION — fill in these values before deploying
   ============================================================ -->
 <script>
 const CONFIG = {
-  // 1. From Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client ID
-  //    Authorized JS origins must include: https://YOUR_GITHUB_USERNAME.github.io
+  // OAuth 2.0 Client ID from Google Cloud Console
   GOOGLE_CLIENT_ID: '1030491418042-a1gkskcfnnjgukmqdro0o4sememtoucu.apps.googleusercontent.com',
 
-  // 2. The long string in your Google Sheet URL between /d/ and /edit
+  // The long string in your Google Sheet URL between /d/ and /edit
   SHEET_ID: '1s2q6jnsBfjgQHm_S8jPZJffZ6vMI07ZcHtjPD05BBAU',
 
-  // 3. Admin PIN — share only with lab members who can add experiments/batches
-  //    Can also be changed here at any time and redeployed
+  // Admin PIN — for sheet-level admin actions
   ADMIN_PIN: 'Hmgcs2!!',
+
+  // Allowed user emails — only these addresses can sign in
+  // Leave empty [] to allow any Google account
+  ALLOWED_EMAILS: [],
 };
 </script>
 <!-- ============================================================ -->
@@ -34,6 +36,8 @@ const CONFIG = {
   --amber:#7a5000;--amber-bg:#fdf4e0;--amber-border:#e8c55a;
   --red:#b83232;--red-bg:#fdf0f0;--red-border:#f0a8a8;
   --blue:#1a5fa8;--blue-bg:#eef4fd;
+  --purple:#6e3aaa;--purple-bg:#f3eeff;--purple-border:#c9a8f0;
+  --slate:#3a4a5c;--slate-bg:#eef1f5;
   --accent:#3b5bdb;--accent-light:#eef0fd;
   --radius:8px;--radius-lg:12px;
   --font:'Segoe UI',system-ui,-apple-system,sans-serif;
@@ -47,6 +51,8 @@ const CONFIG = {
     --amber:#f0c040;--amber-bg:#211900;--amber-border:#4a3800;
     --red:#f07070;--red-bg:#2a0f0f;--red-border:#4a1a1a;
     --blue:#6aa3e8;--blue-bg:#0f1e35;
+    --purple:#b57af5;--purple-bg:#1a0f2a;--purple-border:#4a2a70;
+    --slate:#8aa0ba;--slate-bg:#111820;
     --accent:#7b97f5;--accent-light:#1a1f40;
   }
 }
@@ -58,11 +64,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .topbar-r{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .user-chip{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 12px}
 .user-chip img{width:20px;height:20px;border-radius:50%}
+.project-switcher{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);padding:5px 10px;cursor:pointer}
+.project-switcher:hover{background:var(--bg)}
+.project-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;transition:background .12s;white-space:nowrap}
 .btn:hover{background:var(--bg)}
 .btn-primary{background:var(--accent);color:#fff;border-color:transparent}
 .btn-primary:hover{opacity:.88}
 .btn-danger{color:var(--red);border-color:var(--red-border)}
+.btn-danger:hover{background:var(--red-bg)}
 .btn-sm{padding:4px 10px;font-size:12px}
 .btn svg{width:14px;height:14px;flex-shrink:0}
 .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
@@ -98,12 +108,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .batch-block:last-child{margin-bottom:0}
 .batch-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
 .slides-row{display:flex;gap:5px;flex-wrap:wrap}
-.slide-btn{width:36px;height:36px;border-radius:var(--radius);border:1.5px solid;font-size:12px;font-weight:700;cursor:pointer;transition:transform .1s,box-shadow .1s;display:flex;align-items:center;justify-content:center}
+.slide-btn{width:36px;height:36px;border-radius:var(--radius);border:1.5px solid;font-size:12px;font-weight:700;cursor:pointer;transition:transform .1s,box-shadow .1s;display:flex;align-items:center;justify-content:center;position:relative}
 .slide-btn:hover{transform:scale(1.1);box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .slide-free{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
 .slide-reserved{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border)}
-.slide-used{background:var(--bg);color:var(--text3);border-color:var(--border);cursor:default}
-.slide-used:hover{transform:none;box-shadow:none}
+.slide-used{background:var(--bg);color:var(--text3);border-color:var(--border)}
+.slide-missing{background:var(--purple-bg);color:var(--purple);border-color:var(--purple-border)}
+.slide-discarded{background:var(--slate-bg);color:var(--slate);border-color:var(--border-strong)}
+.slide-missing:hover,.slide-discarded:hover{transform:scale(1.1);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.slide-missing::after,.slide-discarded::after{content:'';position:absolute;inset:3px;border-radius:3px}
 .adj-line{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:6px}
 .legend{display:flex;gap:14px;margin-bottom:1rem;flex-wrap:wrap}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)}
@@ -111,6 +124,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .leg-free{background:var(--green-bg);border-color:var(--green-border)}
 .leg-res{background:var(--amber-bg);border-color:var(--amber-border)}
 .leg-used{background:var(--bg);border-color:var(--border)}
+.leg-missing{background:var(--purple-bg);border-color:var(--purple-border)}
+.leg-discarded{background:var(--slate-bg);border-color:var(--border-strong)}
 .filters{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
 .filters input,.filters select{font-size:13px;padding:5px 9px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface);color:var(--text);height:32px}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;padding:3rem 1rem 2rem;z-index:200;overflow-y:auto}
@@ -122,6 +137,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .form-row input,.form-row select,.form-row textarea{width:100%;font-size:13px;padding:7px 9px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface);color:var(--text)}
 .form-row input:focus,.form-row select:focus,.form-row textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 .form-row textarea{height:60px;resize:vertical}
+.form-row .optional-tag{font-size:10px;color:var(--text3);font-weight:400;text-transform:none;margin-left:4px;letter-spacing:0}
 .form-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .form-check{display:flex;align-items:center;gap:7px;font-size:13px}
 .form-check input[type=checkbox]{width:auto}
@@ -134,13 +150,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .pill-free{background:var(--green-bg);color:var(--green)}
 .pill-reserved{background:var(--amber-bg);color:var(--amber)}
 .pill-used{background:var(--bg);color:var(--text3);border:1px solid var(--border)}
+.pill-missing{background:var(--purple-bg);color:var(--purple)}
+.pill-discarded{background:var(--slate-bg);color:var(--slate)}
 .info-box{background:var(--blue-bg);border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;color:var(--blue);margin-bottom:.85rem;line-height:1.6}
+.warn-box{background:var(--amber-bg);border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;color:var(--amber);margin-bottom:.85rem;line-height:1.6}
 .err-box{background:var(--red-bg);border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;color:var(--red);margin-bottom:.85rem}
 .log-item{border-bottom:1px solid var(--border);padding:.65rem 0}
 .log-item:last-child{border-bottom:none}
 .log-used{color:var(--red)}
 .log-reserved{color:var(--amber)}
 .log-released{color:var(--text3)}
+.log-missing{color:var(--purple)}
+.log-discarded{color:var(--slate)}
+.log-removed{color:var(--text3);font-style:italic}
+.log-edited{color:var(--blue)}
 .setup-wrap{max-width:480px;margin:3rem auto}
 .setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem}
 .setup-card h2{font-size:20px;font-weight:700;margin-bottom:.5rem}
@@ -152,24 +175,41 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .pin-field{text-align:center;font-size:22px;letter-spacing:8px;font-family:var(--mono)}
 .divider{height:1px;background:var(--border);margin:1rem 0}
 .saving{font-size:12px;color:var(--text3)}
+/* Project selector modal */
+.project-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem}
+.project-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:var(--radius);border:1.5px solid var(--border);cursor:pointer;transition:border-color .12s}
+.project-item:hover{border-color:var(--accent)}
+.project-item.active{border-color:var(--accent);background:var(--accent-light)}
+.project-item-name{font-weight:600;font-size:14px}
+.project-item-meta{font-size:11px;color:var(--text2);margin-top:2px}
+/* Tabs for slide modal action sections */
+.action-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1rem;gap:0}
+.action-tab{padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2)}
+.action-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+/* Cascading select hint */
+.cascade-hint{font-size:11px;color:var(--text3);margin-top:3px}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
-const TAB = { EXP:'experiments', MICE:'mice', SLIDES:'slides', LOG:'usage_log' };
+const TAB = { PROJECTS:'projects', EXP:'experiments', MICE:'mice', SLIDES:'slides', LOG:'usage_log' };
 const COLS = {
-  EXP:   ['id','name','description'],
-  MICE:  ['id','expId','mouseNum','organ','breederNo','gender','weightG','takedownAge','tissueDate','sectioningDate','depleted','legacy','notes'],
-  SLIDES:['id','mouseId','batch','slideNum','status','usedBy','usedFor','stainType','antibody','protocolVer','dateUsed','notes'],
-  LOG:   ['timestamp','slideId','action','user','mouseId','batch','slideNum','details'],
+  PROJECTS:['id','name','description','color'],
+  EXP:     ['id','projectId','name','description'],
+  MICE:    ['id','expId','mouseNum','organ','breederNo','gender','weightG','takedownAge','tissueDate','sectioningDate','depleted','legacy','notes'],
+  SLIDES:  ['id','mouseId','batch','slideNum','status','usedBy','usedFor','stainType','antibody','protocolVer','dateUsed','notes'],
+  LOG:     ['timestamp','slideId','action','user','mouseId','batch','slideNum','details'],
 };
+
+const PROJECT_COLORS = ['#3b5bdb','#1e6e3a','#b83232','#7a5000','#6e3aaa','#1a5fa8','#2d6a4f','#9d0208'];
 
 const S = {
   view:'signin', tab:'inventory',
   user:null, isAdmin:false,
-  data:{ experiments:[], mice:[], slides:[], usageLog:[] },
+  currentProjectId: null,
+  data:{ projects:[], experiments:[], mice:[], slides:[], usageLog:[] },
   ui:{ expandedExps:{}, expandedMice:{} },
   filter:{ organ:'all', status:'all', search:'' },
   loading:false, saving:false, error:null,
@@ -206,6 +246,21 @@ async function updateSheetRow(tab, rowIdx, values) {
   await sheetsReq('PUT', `/values/${encodeURIComponent(tab)}!A${rowIdx}:${endCol}${rowIdx}?valueInputOption=RAW`, { values:[values] });
 }
 
+async function deleteSheetRow(tab, rowIdx) {
+  // Get the sheet metadata to find sheet id
+  const meta = await sheetsReq('GET', '');
+  const sheet = meta.sheets.find(s => s.properties.title === tab);
+  if (!sheet) throw new Error('Sheet tab not found: ' + tab);
+  const sheetId = sheet.properties.sheetId;
+  await sheetsReq('POST', ':batchUpdate', {
+    requests:[{
+      deleteDimension:{
+        range:{ sheetId, dimension:'ROWS', startIndex: rowIdx-1, endIndex: rowIdx }
+      }
+    }]
+  });
+}
+
 function rowToObj(cols, row) {
   const o = {};
   cols.forEach((c,i) => { o[c] = row[i] !== undefined ? String(row[i]) : ''; });
@@ -217,29 +272,52 @@ function objToRow(cols, obj) {
 }
 
 async function ensureHeaders() {
-  for (const [tab, cols] of [[TAB.EXP,COLS.EXP],[TAB.MICE,COLS.MICE],[TAB.SLIDES,COLS.SLIDES],[TAB.LOG,COLS.LOG]]) {
+  const tabs = [
+    [TAB.PROJECTS, COLS.PROJECTS],
+    [TAB.EXP, COLS.EXP],
+    [TAB.MICE, COLS.MICE],
+    [TAB.SLIDES, COLS.SLIDES],
+    [TAB.LOG, COLS.LOG],
+  ];
+  for (const [tab, cols] of tabs) {
     const rows = await readTab(tab);
     if (rows.length === 0) await appendRow(tab, cols);
   }
 }
 
+// Row index maps: tab → { id → rowIndex (1-based, accounting for header) }
+const rowMaps = { projects:{}, experiments:{}, mice:{}, slides:{} };
+
 async function loadAllData() {
   await ensureHeaders();
-  const [expRows, miceRows, slideRows, logRows] = await Promise.all([
-    readTab(TAB.EXP), readTab(TAB.MICE), readTab(TAB.SLIDES), readTab(TAB.LOG),
+  const [projRows, expRows, miceRows, slideRows, logRows] = await Promise.all([
+    readTab(TAB.PROJECTS), readTab(TAB.EXP), readTab(TAB.MICE), readTab(TAB.SLIDES), readTab(TAB.LOG),
   ]);
-  function parse(rows, cols) {
+  function parse(rows, cols, mapKey) {
     if (rows.length < 2) return [];
-    return rows.slice(1).filter(r => r && r[0]).map(r => rowToObj(cols, r));
+    const objs = rows.slice(1).filter(r => r && r[0]).map(r => rowToObj(cols, r));
+    if (mapKey) {
+      rowMaps[mapKey] = {};
+      objs.forEach((o, i) => { rowMaps[mapKey][o.id] = i + 2; });
+    }
+    return objs;
   }
-  const slides = parse(slideRows, COLS.SLIDES).map(s => ({
+  const slides = parse(slideRows, COLS.SLIDES, 'slides').map(s => ({
     ...s,
     slideNum: parseInt(s.slideNum) || 0,
     batch: (s.batch===''||s.batch==='null') ? null : (isNaN(parseInt(s.batch)) ? null : parseInt(s.batch)),
   }));
-  S.slideRowMap = {};
-  slides.forEach((sl, i) => { S.slideRowMap[sl.id] = i + 2; });
-  return { experiments: parse(expRows, COLS.EXP), mice: parse(miceRows, COLS.MICE), slides, usageLog: parse(logRows, COLS.LOG) };
+  // rebuild slide rowMap
+  rowMaps.slides = {};
+  slides.forEach((sl, i) => { rowMaps.slides[sl.id] = i + 2; });
+
+  return {
+    projects: parse(projRows, COLS.PROJECTS, 'projects'),
+    experiments: parse(expRows, COLS.EXP, 'experiments'),
+    mice: parse(miceRows, COLS.MICE, 'mice'),
+    slides,
+    usageLog: parse(logRows, COLS.LOG),
+  };
 }
 
 // ── Adjacency ─────────────────────────────────────────────────────────────
@@ -272,13 +350,28 @@ function initTokenClient() {
     callback: async (resp) => {
       if (resp.error) { S.error = 'Auth error: ' + resp.error; render(); return; }
       gToken = resp.access_token;
+      let userEmail = '';
       try {
         const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers:{ Authorization:`Bearer ${gToken}` } });
         const info = await r.json();
-        S.user = { name: info.name, email: info.email, picture: info.picture };
+        userEmail = info.email || '';
+        // Check allowed emails
+        if (CONFIG.ALLOWED_EMAILS.length > 0 && !CONFIG.ALLOWED_EMAILS.includes(userEmail)) {
+          S.view = 'signin';
+          document.getElementById('signin-err').innerHTML = `<div class="err-box" style="margin-top:1rem">Access denied. Your email (${userEmail}) is not on the allowed list. Contact your lab admin.</div>`;
+          gToken = null;
+          return;
+        }
+        S.user = { name: info.name, email: userEmail, picture: info.picture };
       } catch(e) { S.user = { name:'Lab member', email:'', picture:'' }; }
       S.view = 'app'; S.loading = true; render();
-      try { S.data = await loadAllData(); } catch(e) { S.error = 'Could not load sheet: ' + e.message; }
+      try {
+        S.data = await loadAllData();
+        // Auto-select first project if only one
+        if (!S.currentProjectId && S.data.projects.length === 1) {
+          S.currentProjectId = S.data.projects[0].id;
+        }
+      } catch(e) { S.error = 'Could not load sheet: ' + e.message; }
       S.loading = false; render();
     },
   });
@@ -293,14 +386,44 @@ const SVG = {
   download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
   refresh:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`,
   logout:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
+  folder:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
+  edit:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  trash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>`,
 };
+
+// ── Current project helpers ───────────────────────────────────────────────
+function currentProject() {
+  return S.data.projects.find(p => p.id === S.currentProjectId) || null;
+}
+function projectExperiments() {
+  if (!S.currentProjectId) return S.data.experiments;
+  return S.data.experiments.filter(e => e.projectId === S.currentProjectId);
+}
+function projectMice() {
+  const exps = new Set(projectExperiments().map(e => e.id));
+  return S.data.mice.filter(m => exps.has(m.expId));
+}
+function projectSlides() {
+  const miceIds = new Set(projectMice().map(m => m.id));
+  return S.data.slides.filter(s => miceIds.has(s.mouseId));
+}
 
 // ── Render ────────────────────────────────────────────────────────────────
 function render() {
   if (S.view === 'signin') { renderSignin(); return; }
+  const proj = currentProject();
+  const projColor = proj?.color || 'var(--accent)';
+
   document.getElementById('app').innerHTML = `
     <div class="topbar">
-      <div class="logo">SlideTrack <sub>Lab Slide Inventory</sub></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="logo">SlideTrack</div>
+        <div class="project-switcher" id="btn-project-switch">
+          <span class="project-dot" style="background:${projColor}"></span>
+          ${proj ? proj.name : 'All projects'}
+          ${SVG.chevron}
+        </div>
+      </div>
       <div class="topbar-r">
         ${S.saving ? `<span class="saving">Saving…</span>` : ''}
         ${S.user ? `<div class="user-chip">${S.user.picture?`<img src="${S.user.picture}">`:''}${S.user.name||S.user.email}</div>` : ''}
@@ -350,11 +473,16 @@ function renderTab() {
 }
 
 function renderInventoryHTML() {
-  const {experiments, mice, slides} = S.data;
+  const slides = projectSlides();
+  const mice   = projectMice();
+  const experiments = projectExperiments();
+
   const {organ, status, search} = S.filter;
-  const totalFree = slides.filter(s=>s.status==='free').length;
-  const totalRes  = slides.filter(s=>s.status==='reserved').length;
-  const totalUsed = slides.filter(s=>s.status==='used').length;
+  const totalFree      = slides.filter(s=>s.status==='free').length;
+  const totalRes       = slides.filter(s=>s.status==='reserved').length;
+  const totalUsed      = slides.filter(s=>s.status==='used').length;
+  const totalMissing   = slides.filter(s=>s.status==='missing').length;
+  const totalDiscarded = slides.filter(s=>s.status==='discarded').length;
   const organs = [...new Set(mice.map(m=>m.organ))].filter(Boolean);
 
   let exps = [...experiments].sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}));
@@ -369,7 +497,6 @@ function renderInventoryHTML() {
   exps.forEach(exp => {
     const expMice = mice.filter(m=>m.expId===exp.id)
       .sort((a,b) => {
-        // Sort by mouseNum numerically, then by organ alphabetically
         const nA = parseInt(a.mouseNum)||0, nB = parseInt(b.mouseNum)||0;
         return nA !== nB ? nA - nB : a.organ.localeCompare(b.organ);
       });
@@ -397,11 +524,18 @@ function renderInventoryHTML() {
         const bSlides = mSlides.filter(s=>s.batch===bk).sort((a,b)=>a.slideNum-b.slideNum);
         const lbl = bk===null ? 'Legacy (no batch)' : `Batch ${bk}`;
         const btns = bSlides.map(sl => {
-          const cls = sl.status==='free'?'slide-free':sl.status==='reserved'?'slide-reserved':'slide-used';
+          const cls = sl.status==='free'?'slide-free'
+            :sl.status==='reserved'?'slide-reserved'
+            :sl.status==='missing'?'slide-missing'
+            :sl.status==='discarded'?'slide-discarded'
+            :'slide-used';
           const tip = sl.status==='free'?'Free — click to use or reserve'
             :sl.status==='reserved'?`Reserved: ${sl.usedBy||'?'} · ${sl.antibody||sl.usedFor||''}`
+            :sl.status==='missing'?`Missing — last seen: ${sl.dateUsed||'?'}`
+            :sl.status==='discarded'?`Discarded: ${sl.notes||''}`
             :`Used: ${sl.usedBy||'?'} · ${sl.antibody||''} ${sl.dateUsed||''}`;
-          return `<button class="slide-btn ${cls}" data-slide="${sl.id}" title="${tip}">${sl.slideNum}</button>`;
+          const label = sl.status==='missing'?'?':sl.status==='discarded'?'✕':sl.slideNum;
+          return `<button class="slide-btn ${cls}" data-slide="${sl.id}" title="${tip}">${label}</button>`;
         }).join('');
         batchHTML += `<div class="batch-block"><div class="batch-label">${lbl}</div><div class="slides-row">${btns}</div></div>`;
       });
@@ -431,24 +565,32 @@ function renderInventoryHTML() {
 
     expHTML += `<div class="exp-block">
       <div class="exp-header" data-exp="${exp.id}">
-        <div>
+        <div style="flex:1">
           <div class="exp-title">${exp.id}${exp.name?' — '+exp.name:''}</div>
           ${exp.description?`<div class="exp-desc">${exp.description}</div>`:''}
           <div style="font-size:11px;color:var(--text3);margin-top:3px">Free:${eFree} · Res:${eRes} · Used:${eUsed} · Mice:${expMice.length}</div>
         </div>
-        <span class="exp-chevron ${isOpen?'open':''}">${SVG.chevron}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${S.isAdmin?`<button class="btn btn-sm btn-danger" data-del-exp="${exp.id}" title="Delete experiment">${SVG.trash}</button>`:''}
+          <span class="exp-chevron ${isOpen?'open':''}">${SVG.chevron}</span>
+        </div>
       </div>
       ${isOpen?`<div class="exp-body">${miceHTML||'<div class="empty" style="padding:1.5rem">No mice yet.</div>'}</div>`:''}
     </div>`;
   });
 
-  if (!expHTML) expHTML = `<div class="empty">No experiments found. ${S.isAdmin?'Add one above.':'Ask an admin to add experiments.'}</div>`;
+  if (!expHTML) {
+    const noProj = !S.currentProjectId && S.data.projects.length > 0;
+    expHTML = `<div class="empty">${noProj ? 'Select a project above to see its experiments.' : `No experiments found. ${S.isAdmin?'Add one above.':'Ask an admin to add experiments.'}`}</div>`;
+  }
 
   return `
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${totalFree}</div><div class="stat-lbl">Free blanks</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${totalFree}</div><div class="stat-lbl">Free</div></div>
     <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${totalRes}</div><div class="stat-lbl">Reserved</div></div>
     <div class="stat-card"><div class="stat-val" style="color:var(--text3)">${totalUsed}</div><div class="stat-lbl">Used</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--purple)">${totalMissing}</div><div class="stat-lbl">Missing</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--slate)">${totalDiscarded}</div><div class="stat-lbl">Discarded</div></div>
     <div class="stat-card"><div class="stat-val">${experiments.length}</div><div class="stat-lbl">Experiments</div></div>
     <div class="stat-card"><div class="stat-val">${mice.length}</div><div class="stat-lbl">Mice</div></div>
   </div>
@@ -456,6 +598,8 @@ function renderInventoryHTML() {
     <div class="legend-item"><div class="leg-dot leg-free"></div>Free</div>
     <div class="legend-item"><div class="leg-dot leg-res"></div>Reserved</div>
     <div class="legend-item"><div class="leg-dot leg-used"></div>Used</div>
+    <div class="legend-item"><div class="leg-dot leg-missing"></div>Missing</div>
+    <div class="legend-item"><div class="leg-dot leg-discarded"></div>Discarded</div>
   </div>
   <div class="filters">
     <input id="flt-search" placeholder="Search…" value="${search}" style="width:200px"/>
@@ -465,6 +609,8 @@ function renderInventoryHTML() {
       <option value="free" ${status==='free'?'selected':''}>Free only</option>
       <option value="reserved" ${status==='reserved'?'selected':''}>Reserved</option>
       <option value="used" ${status==='used'?'selected':''}>Used</option>
+      <option value="missing" ${status==='missing'?'selected':''}>Missing</option>
+      <option value="discarded" ${status==='discarded'?'selected':''}>Discarded</option>
     </select>
     ${S.isAdmin?`<button class="btn btn-sm btn-primary" id="btn-add-exp">${SVG.plus} Experiment</button>`:''}
     ${S.isAdmin?`<button class="btn btn-sm" id="btn-add-mouse">${SVG.plus} Mouse</button>`:''}
@@ -476,9 +622,11 @@ function renderInventoryHTML() {
 function renderLogHTML() {
   const log = [...S.data.usageLog].reverse();
   if (!log.length) return `<div class="empty">No usage history yet.</div>`;
+  const colorMap = {used:'log-used',reserved:'log-reserved',released:'log-released',missing:'log-missing',discarded:'log-discarded',removed:'log-removed',edited:'log-edited'};
+  const iconMap  = {used:'●',reserved:'◐',released:'○',missing:'?',discarded:'✕',removed:'↩',edited:'✎'};
   return `<div>`+log.map(l=>{
-    const cls=l.action==='used'?'log-used':l.action==='reserved'?'log-reserved':'log-released';
-    const icon=l.action==='used'?'●':l.action==='reserved'?'◐':'○';
+    const cls = colorMap[l.action] || '';
+    const icon = iconMap[l.action] || '·';
     return `<div class="log-item">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <span style="font-family:var(--mono);font-size:12px">${l.mouseId||'?'} · ${l.batch?'B'+l.batch:'legacy'} · S${l.slideNum||'?'}</span>
@@ -492,17 +640,15 @@ function renderLogHTML() {
   }).join('')+'</div>';
 }
 
-// ── Datalist helpers ──────────────────────────────────────────────────────
+// ── Datalists ─────────────────────────────────────────────────────────────
 function protocolDatalist() {
   const versions = [...new Set(S.data.slides.map(s=>s.protocolVer).filter(Boolean))].sort();
   return `<datalist id="proto-list">${versions.map(v=>`<option value="${v}">`).join('')}</datalist>`;
 }
-
 function antibodyDatalist() {
   const antibodies = [...new Set(S.data.slides.map(s=>s.antibody).filter(Boolean))].sort();
   return `<datalist id="antibody-list">${antibodies.map(a=>`<option value="${a}">`).join('')}</datalist>`;
 }
-
 
 function showModal(html) {
   document.getElementById('modal-area').innerHTML = `<div class="overlay" id="overlay">${html}</div>`;
@@ -510,9 +656,12 @@ function showModal(html) {
 }
 function closeModal() { document.getElementById('modal-area').innerHTML = ''; }
 
+// ── Slide detail modal ────────────────────────────────────────────────────
 function modalSlide(sl) {
   const ref = `${sl.mouseId} · ${sl.batch!==null?'Batch '+sl.batch:'Legacy'} · Slide ${sl.slideNum}`;
-  const isFree = sl.status==='free', isReserved = sl.status==='reserved';
+  const isFree = sl.status==='free', isReserved = sl.status==='reserved', isUsed = sl.status==='used';
+  const isMissing = sl.status==='missing', isDiscarded = sl.status==='discarded';
+
   const rows = [
     ['Status',`<span class="pill pill-${sl.status}">${sl.status}</span>`],
     sl.usedBy?['By',sl.usedBy]:null,
@@ -520,98 +669,243 @@ function modalSlide(sl) {
     sl.antibody?['Antibody/Probe',sl.antibody]:null,
     sl.protocolVer?['Protocol ver.',sl.protocolVer]:null,
     sl.usedFor?['Purpose',sl.usedFor]:null,
-    sl.dateUsed?['Date used',sl.dateUsed]:null,
+    sl.dateUsed?['Date',sl.dateUsed]:null,
     sl.notes?['Notes',sl.notes]:null,
   ].filter(Boolean).map(([l,v])=>`<div class="detail-row"><span class="detail-lbl">${l}</span><span>${v}</span></div>`).join('');
 
-  const form = isFree ? `
-    ${protocolDatalist()}
-    ${antibodyDatalist()}
-    <div class="form-row"><label>Your name *</label><input id="a-user" value="${S.user?.name||''}"/></div>
-    <div class="form-2col">
-      <div class="form-row"><label>Stain type</label><select id="a-stain"><option value="">—</option><option>ISH</option><option>IHC</option><option>H&amp;E</option><option>AB-PAS</option><option>Other</option></select></div>
-      <div class="form-row"><label>Protocol ver.</label><input id="a-protocol" list="proto-list" placeholder="e.g. v1" autocomplete="off"/></div>
-    </div>
-    <div class="form-row"><label>Antibody / Probe</label><input id="a-antibody" list="antibody-list" placeholder="e.g. Hmgcs2"/></div>
-    <div class="form-row"><label>Purpose / notes</label><textarea id="a-notes" placeholder="What staining run is this for?"></textarea></div>
-    <div class="modal-btns">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn" id="btn-reserve">Reserve</button>
-      <button class="btn btn-primary" id="btn-use">Mark used</button>
-    </div>` :
-  isReserved ? `
-    <div class="form-row"><label>Your name</label><input id="a-user" value="${sl.usedBy||S.user?.name||''}"/></div>
-    <div class="modal-btns">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-danger" id="btn-release">Release reservation</button>
-      <button class="btn btn-primary" id="btn-use">Mark used now</button>
-    </div>` :
-  `<div class="modal-btns"><button class="btn" onclick="closeModal()">Close</button></div>`;
+  let actionArea = '';
 
-  showModal(`<div class="modal"><h3>Slide details</h3><div class="slide-ref">${ref}</div><div class="detail-box">${rows}</div>${form}</div>`);
+  if (isFree) {
+    actionArea = `
+      ${protocolDatalist()}${antibodyDatalist()}
+      <div class="form-row"><label>Your name *</label><input id="a-user" value="${S.user?.name||''}"/></div>
+      <div class="form-2col">
+        <div class="form-row"><label>Stain type <span class="optional-tag">optional</span></label>
+          <select id="a-stain"><option value="">—</option><option>ISH</option><option>IHC</option><option>H&amp;E</option><option>AB-PAS</option><option>Other</option></select></div>
+        <div class="form-row"><label>Protocol ver. <span class="optional-tag">optional</span></label>
+          <input id="a-protocol" list="proto-list" placeholder="e.g. v1" autocomplete="off"/></div>
+      </div>
+      <div class="form-row"><label>Antibody / Probe <span class="optional-tag">optional</span></label>
+        <input id="a-antibody" list="antibody-list" placeholder="e.g. Hmgcs2"/></div>
+      <div class="form-row"><label>Date <span class="optional-tag">optional</span></label>
+        <input id="a-date" type="date"/></div>
+      <div class="form-row"><label>Purpose / notes <span class="optional-tag">optional</span></label>
+        <textarea id="a-notes" placeholder="What staining run is this for?"></textarea></div>
+      <div class="modal-btns">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-danger" id="btn-mark-missing">Mark missing</button>
+        <button class="btn" style="color:var(--slate);border-color:var(--border-strong)" id="btn-mark-discard">Discard</button>
+        <button class="btn" id="btn-reserve">Reserve</button>
+        <button class="btn btn-primary" id="btn-use">Mark used</button>
+      </div>`;
+  } else if (isReserved) {
+    actionArea = `
+      <div class="form-row"><label>Your name</label><input id="a-user" value="${sl.usedBy||S.user?.name||''}"/></div>
+      <div class="modal-btns">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-danger" id="btn-release">Release reservation</button>
+        <button class="btn btn-danger" id="btn-mark-missing">Mark missing</button>
+        <button class="btn btn-primary" id="btn-use">Mark used now</button>
+      </div>`;
+  } else if (isUsed) {
+    actionArea = `
+      ${protocolDatalist()}${antibodyDatalist()}
+      <div class="info-box" style="margin-bottom:.5rem">Edit the details below, then save.</div>
+      <div class="form-row"><label>Used by *</label><input id="a-user" value="${sl.usedBy||''}"/></div>
+      <div class="form-2col">
+        <div class="form-row"><label>Stain type <span class="optional-tag">optional</span></label>
+          <select id="a-stain">
+            <option value="">—</option>
+            ${['ISH','IHC','H&E','AB-PAS','Other'].map(o=>`<option ${sl.stainType===o?'selected':''}>${o}</option>`).join('')}
+          </select></div>
+        <div class="form-row"><label>Protocol ver. <span class="optional-tag">optional</span></label>
+          <input id="a-protocol" list="proto-list" value="${sl.protocolVer||''}" autocomplete="off"/></div>
+      </div>
+      <div class="form-row"><label>Antibody / Probe <span class="optional-tag">optional</span></label>
+        <input id="a-antibody" list="antibody-list" value="${sl.antibody||''}"/></div>
+      <div class="form-row"><label>Date <span class="optional-tag">optional</span></label>
+        <input id="a-date" type="date" value="${sl.dateUsed||''}"/></div>
+      <div class="form-row"><label>Purpose / notes <span class="optional-tag">optional</span></label>
+        <textarea id="a-notes">${sl.usedFor||''}</textarea></div>
+      <div class="modal-btns">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-danger" id="btn-remove-use">Remove use (make free)</button>
+        <button class="btn btn-primary" id="btn-edit-use">Save changes</button>
+      </div>`;
+  } else if (isMissing || isDiscarded) {
+    actionArea = `
+      <div class="form-row"><label>Notes <span class="optional-tag">optional</span></label>
+        <textarea id="a-notes">${sl.notes||''}</textarea></div>
+      <div class="modal-btns">
+        <button class="btn" onclick="closeModal()">Close</button>
+        <button class="btn btn-primary" id="btn-restore-free">Restore as free</button>
+      </div>`;
+  }
+
+  showModal(`<div class="modal"><h3>Slide details</h3><div class="slide-ref">${ref}</div><div class="detail-box">${rows||'<div style="color:var(--text3);font-size:12px">No details recorded.</div>'}</div>${actionArea}</div>`);
+
   document.getElementById('btn-use')?.addEventListener('click',()=>doUse(sl));
   document.getElementById('btn-reserve')?.addEventListener('click',()=>doReserve(sl));
   document.getElementById('btn-release')?.addEventListener('click',()=>doRelease(sl));
+  document.getElementById('btn-mark-missing')?.addEventListener('click',()=>doMarkMissing(sl));
+  document.getElementById('btn-mark-discard')?.addEventListener('click',()=>doDiscard(sl));
+  document.getElementById('btn-remove-use')?.addEventListener('click',()=>doRemoveUse(sl));
+  document.getElementById('btn-edit-use')?.addEventListener('click',()=>doEditUse(sl));
+  document.getElementById('btn-restore-free')?.addEventListener('click',()=>doRestoreFree(sl));
 }
 
+// ── Experiment modal ──────────────────────────────────────────────────────
 function modalAddExp() {
+  const projectOpts = S.data.projects.map(p=>`<option value="${p.id}" ${p.id===S.currentProjectId?'selected':''}>${p.name}</option>`).join('');
   showModal(`<div class="modal"><h3>Add experiment</h3>
-    <div class="info-box">Use just the experiment number here, e.g. <strong>Exp39</strong>. Mice and organs are added separately.</div>
+    ${S.data.projects.length === 0 ? `<div class="warn-box">No projects yet. Add a project first via the project switcher.</div>` : ''}
+    <div class="form-row"><label>Project *</label>
+      <select id="e-proj">${projectOpts || '<option value="">— no projects —</option>'}</select>
+    </div>
     <div class="form-row"><label>Experiment ID *</label><input id="e-id" placeholder="Exp57"/></div>
-    <div class="form-row"><label>Short name</label><input id="e-name" placeholder="Naive P14 cohort"/></div>
-    <div class="form-row"><label>Description</label><textarea id="e-desc" placeholder="Purpose, project, PI, etc."></textarea></div>
+    <div class="form-row"><label>Short name <span class="optional-tag">optional</span></label><input id="e-name" placeholder="Naive P14 cohort"/></div>
+    <div class="form-row"><label>Description <span class="optional-tag">optional</span></label><textarea id="e-desc"></textarea></div>
     <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-save-exp">Save</button></div>
   </div>`);
   document.getElementById('btn-save-exp').addEventListener('click', doAddExp);
 }
 
+// ── Mouse modal ───────────────────────────────────────────────────────────
 function modalAddMouse() {
   if (!S.data.experiments.length) { alert('Add an experiment first.'); return; }
+  const expOpts = projectExperiments().map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('');
   showModal(`<div class="modal"><h3>Add mouse</h3>
     <div class="info-box">ID will be generated as <strong>ExpID#N-Organ</strong>, e.g. <strong>Exp39#2-SI</strong></div>
     <div class="form-row"><label>Experiment *</label>
-      <select id="m-exp">${S.data.experiments.map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('')}</select>
+      <select id="m-exp">${expOpts}</select>
     </div>
     <div class="form-2col">
       <div class="form-row"><label>Mouse # *</label><input id="m-num" type="number" placeholder="1" min="1"/></div>
       <div class="form-row"><label>Organ *</label><select id="m-organ"><option>SI</option><option>Liver</option><option>Col</option><option>GF</option><option>Other</option></select></div>
     </div>
     <div class="form-2col">
-      <div class="form-row"><label>Gender</label><select id="m-gender"><option value="">—</option><option>M</option><option>F</option></select></div>
-      <div class="form-row"><label>Weight at takedown (g)</label><input id="m-weight" type="number" placeholder="25.3" step="0.1"/></div>
+      <div class="form-row"><label>Gender <span class="optional-tag">optional</span></label><select id="m-gender"><option value="">—</option><option>M</option><option>F</option></select></div>
+      <div class="form-row"><label>Weight at takedown (g) <span class="optional-tag">optional</span></label><input id="m-weight" type="number" placeholder="25.3" step="0.1"/></div>
     </div>
     <div class="form-2col">
-      <div class="form-row"><label>Takedown age</label><input id="m-age" placeholder="P14"/></div>
-      <div class="form-row"><label>Breeder no.</label><input id="m-breeder" placeholder="B123"/></div>
+      <div class="form-row"><label>Takedown age <span class="optional-tag">optional</span></label><input id="m-age" placeholder="P14"/></div>
+      <div class="form-row"><label>Breeder no. <span class="optional-tag">optional</span></label><input id="m-breeder" placeholder="B123"/></div>
     </div>
     <div class="form-2col">
-      <div class="form-row"><label>Tissue collection date</label><input id="m-tissue" type="date"/></div>
-      <div class="form-row"><label>Sectioning request date</label><input id="m-section" type="date"/></div>
+      <div class="form-row"><label>Tissue date <span class="optional-tag">optional</span></label><input id="m-tissue" type="date"/></div>
+      <div class="form-row"><label>Sectioning date <span class="optional-tag">optional</span></label><input id="m-section" type="date"/></div>
     </div>
     <div class="form-row" style="display:flex;gap:20px">
       <label class="form-check"><input type="checkbox" id="m-depleted"> Depleted</label>
       <label class="form-check"><input type="checkbox" id="m-legacy"> Legacy</label>
     </div>
-    <div class="form-row"><label>Notes</label><textarea id="m-notes"></textarea></div>
+    <div class="form-row"><label>Notes <span class="optional-tag">optional</span></label><textarea id="m-notes"></textarea></div>
     <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-save-mouse">Save mouse</button></div>
   </div>`);
   document.getElementById('btn-save-mouse').addEventListener('click', doAddMouse);
 }
 
+// ── Batch modal with cascading experiment → mouse selector ────────────────
 function modalAddBatch() {
   if (!S.data.mice.length) { alert('Add a mouse first.'); return; }
+  const exps = projectExperiments();
+  const expOpts = exps.map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('');
+
   showModal(`<div class="modal"><h3>Add batch / slides</h3>
+    <div class="form-row"><label>Experiment *</label>
+      <select id="b-exp">${expOpts || '<option value="">— no experiments —</option>'}</select>
+      <div class="cascade-hint">Select experiment first to filter mice</div>
+    </div>
     <div class="form-row"><label>Mouse *</label>
-      <select id="b-mouse">${S.data.mice.map(m=>`<option value="${m.id}">${m.id}</option>`).join('')}</select>
+      <select id="b-mouse"><option value="">— select experiment first —</option></select>
     </div>
     <div class="form-2col">
-      <div class="form-row"><label>Batch number (blank = legacy)</label><input id="b-num" type="number" placeholder="3" min="1"/></div>
-      <div class="form-row"><label>Sectioning request date</label><input id="b-date" type="date"/></div>
+      <div class="form-row"><label>Batch number <span class="optional-tag">blank = legacy</span></label><input id="b-num" type="number" placeholder="3" min="1"/></div>
+      <div class="form-row"><label>Sectioning date <span class="optional-tag">optional</span></label><input id="b-date" type="date"/></div>
     </div>
     <div class="form-row"><label>Number of slides *</label><input id="b-count" type="number" placeholder="5" min="1" max="200"/></div>
     <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-save-batch">Add slides</button></div>
   </div>`);
+
+  // Populate mice on experiment change
+  function updateMiceList() {
+    const expId = document.getElementById('b-exp')?.value;
+    const miceForExp = S.data.mice.filter(m => m.expId === expId);
+    const sel = document.getElementById('b-mouse');
+    if (sel) sel.innerHTML = miceForExp.length
+      ? miceForExp.map(m=>`<option value="${m.id}">${m.id} (${m.organ})</option>`).join('')
+      : '<option value="">— no mice in this experiment —</option>';
+  }
+  document.getElementById('b-exp')?.addEventListener('change', updateMiceList);
+  updateMiceList(); // initial populate
+
   document.getElementById('btn-save-batch').addEventListener('click', doAddBatch);
+}
+
+// ── Project modal ─────────────────────────────────────────────────────────
+function modalProjects() {
+  const proj = S.data.projects;
+  const listHTML = proj.map((p,i) => `
+    <div class="project-item ${p.id===S.currentProjectId?'active':''}" data-pick-proj="${p.id}">
+      <div>
+        <div class="project-item-name" style="color:${p.color||'var(--accent)'}">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color||'var(--accent)'};margin-right:6px;vertical-align:middle"></span>
+          ${p.name}
+        </div>
+        ${p.description?`<div class="project-item-meta">${p.description}</div>`:''}
+      </div>
+      ${S.isAdmin?`<button class="btn btn-sm btn-danger" data-del-proj="${p.id}">${SVG.trash}</button>`:''}
+    </div>`).join('');
+
+  showModal(`<div class="modal"><h3>${SVG.folder} Projects</h3>
+    <div class="project-list">
+      <div class="project-item ${!S.currentProjectId?'active':''}" data-pick-proj="">
+        <div><div class="project-item-name">All projects</div><div class="project-item-meta">View everything across all projects</div></div>
+      </div>
+      ${listHTML}
+    </div>
+    ${S.isAdmin?`
+    <div class="divider"></div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">New project</div>
+    <div class="form-row"><label>Name *</label><input id="np-name" placeholder="GF Colonization Study"/></div>
+    <div class="form-row"><label>Description <span class="optional-tag">optional</span></label><input id="np-desc" placeholder="PI, grant, goal…"/></div>
+    <div class="form-row"><label>Color</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px" id="np-colors">
+        ${PROJECT_COLORS.map((c,i)=>`<div class="color-pick ${i===0?'selected':''}" data-col="${c}" style="width:22px;height:22px;border-radius:50%;background:${c};cursor:pointer;border:2px solid ${i===0?'var(--text)':'transparent'}"></div>`).join('')}
+      </div>
+    </div>
+    <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-save-proj">Create project</button></div>
+    `:``}
+  </div>`);
+
+  // Color picker
+  document.querySelectorAll('.color-pick').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.color-pick').forEach(e=>{ e.style.border='2px solid transparent'; });
+      el.style.border='2px solid var(--text)';
+    });
+  });
+  // Pick project
+  document.querySelectorAll('[data-pick-proj]').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.closest('[data-del-proj]')) return;
+      S.currentProjectId = el.dataset.pickProj || null;
+      closeModal(); render();
+    });
+  });
+  // Delete project
+  document.querySelectorAll('[data-del-proj]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const pid = el.dataset.delProj;
+      const hasExps = S.data.experiments.some(exp => exp.projectId === pid);
+      if (hasExps) { alert('Cannot delete: project still has experiments. Remove them first.'); return; }
+      if (!confirm('Delete this project?')) return;
+      doDeleteProject(pid);
+    });
+  });
+  // Save project
+  document.getElementById('btn-save-proj')?.addEventListener('click', doAddProject);
 }
 
 function modalPin() {
@@ -638,14 +932,47 @@ async function persist(fn) {
   S.saving=false; render();
 }
 
+async function doAddProject() {
+  const name = document.getElementById('np-name')?.value.trim();
+  if (!name) { alert('Name required'); return; }
+  const desc = document.getElementById('np-desc')?.value.trim();
+  const selectedCol = document.querySelector('.color-pick[style*="var(--text)"]');
+  const color = selectedCol ? selectedCol.dataset.col : PROJECT_COLORS[0];
+  const id = uid();
+  const proj = { id, name, description: desc, color };
+  S.data.projects.push(proj);
+  S.currentProjectId = id;
+  closeModal(); render();
+  await persist(async () => { await appendRow(TAB.PROJECTS, objToRow(COLS.PROJECTS, proj)); });
+}
+
+async function doDeleteProject(pid) {
+  const rowIdx = rowMaps.projects[pid];
+  S.data.projects = S.data.projects.filter(p => p.id !== pid);
+  if (S.currentProjectId === pid) S.currentProjectId = null;
+  closeModal(); render();
+  if (rowIdx) await persist(async () => { await deleteSheetRow(TAB.PROJECTS, rowIdx); });
+}
+
 async function doAddExp() {
   const id = document.getElementById('e-id')?.value.trim();
   if (!id) { alert('ID required'); return; }
   if (S.data.experiments.find(e=>e.id===id)) { alert('ID already exists'); return; }
-  const exp = { id, name:document.getElementById('e-name')?.value.trim(), description:document.getElementById('e-desc')?.value.trim() };
+  const projectId = document.getElementById('e-proj')?.value || S.currentProjectId || '';
+  const exp = { id, projectId, name:document.getElementById('e-name')?.value.trim(), description:document.getElementById('e-desc')?.value.trim() };
   S.data.experiments.push(exp);
   closeModal(); render();
   await persist(async () => { await appendRow(TAB.EXP, objToRow(COLS.EXP, exp)); });
+}
+
+async function doDeleteExp(expId) {
+  const hasMice = S.data.mice.some(m => m.expId === expId);
+  if (hasMice) { alert('Cannot delete: experiment still has mice. Remove all mice (and their slides) first.'); return; }
+  if (!confirm(`Delete experiment ${expId}? This cannot be undone.`)) return;
+  const rowIdx = rowMaps.experiments[expId];
+  S.data.experiments = S.data.experiments.filter(e => e.id !== expId);
+  render();
+  if (rowIdx) await persist(async () => { await deleteSheetRow(TAB.EXP, rowIdx); S.data = await loadAllData(); render(); });
 }
 
 async function doAddMouse() {
@@ -675,6 +1002,7 @@ async function doAddMouse() {
 
 async function doAddBatch() {
   const mouseId=document.getElementById('b-mouse')?.value;
+  if (!mouseId) { alert('Select a mouse'); return; }
   const batchRaw=document.getElementById('b-num')?.value.trim();
   const batch=batchRaw===''?null:parseInt(batchRaw);
   const count=parseInt(document.getElementById('b-count')?.value)||0;
@@ -693,9 +1021,7 @@ async function doAddBatch() {
   closeModal(); render();
   await persist(async () => {
     for (const sl of newSlides) await appendRow(TAB.SLIDES, objToRow(COLS.SLIDES, sl));
-    // Reload to get accurate row map for future edits
-    S.data = await loadAllData();
-    render();
+    S.data = await loadAllData(); render();
   });
 }
 
@@ -706,7 +1032,7 @@ function makeLog(sl, action, user, details) {
 }
 
 async function syncSlide(sl) {
-  const rowIdx=S.slideRowMap[sl.id];
+  const rowIdx=rowMaps.slides[sl.id];
   if (!rowIdx) { console.warn('No row for', sl.id); return; }
   await updateSheetRow(TAB.SLIDES, rowIdx, objToRow(COLS.SLIDES, {...sl, batch:sl.batch!==null?String(sl.batch):'', slideNum:String(sl.slideNum)}));
 }
@@ -718,7 +1044,8 @@ async function doUse(sl) {
   const antibody=document.getElementById('a-antibody')?.value||sl.antibody;
   const protocolVer=document.getElementById('a-protocol')?.value||sl.protocolVer;
   const usedFor=document.getElementById('a-notes')?.value||sl.usedFor;
-  Object.assign(sl,{status:'used',usedBy:user,stainType,antibody,protocolVer,usedFor,dateUsed:today()});
+  const dateUsed=document.getElementById('a-date')?.value||today();
+  Object.assign(sl,{status:'used',usedBy:user,stainType,antibody,protocolVer,usedFor,dateUsed});
   const log=makeLog(sl,'used',user,[stainType,antibody,protocolVer,usedFor]);
   S.data.usageLog.push(log);
   closeModal(); render();
@@ -732,7 +1059,8 @@ async function doReserve(sl) {
   const antibody=document.getElementById('a-antibody')?.value;
   const protocolVer=document.getElementById('a-protocol')?.value;
   const usedFor=document.getElementById('a-notes')?.value;
-  Object.assign(sl,{status:'reserved',usedBy:user,stainType,antibody,protocolVer,usedFor});
+  const dateUsed=document.getElementById('a-date')?.value||'';
+  Object.assign(sl,{status:'reserved',usedBy:user,stainType,antibody,protocolVer,usedFor,dateUsed});
   const log=makeLog(sl,'reserved',user,[stainType,antibody,protocolVer,usedFor]);
   S.data.usageLog.push(log);
   closeModal(); render();
@@ -748,50 +1076,71 @@ async function doRelease(sl) {
   await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
 }
 
+// ── NEW: Remove use (mark free again) ────────────────────────────────────
+async function doRemoveUse(sl) {
+  if (!confirm('Remove use record and mark slide as free again?')) return;
+  const user = S.user?.name || 'admin';
+  const log = makeLog(sl, 'removed', user, [`Removed use by ${sl.usedBy||'?'}`]);
+  Object.assign(sl, {status:'free',usedBy:'',usedFor:'',stainType:'',antibody:'',protocolVer:'',dateUsed:'',notes:''});
+  S.data.usageLog.push(log);
+  closeModal(); render();
+  await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
+}
+
+// ── NEW: Edit use details ────────────────────────────────────────────────
+async function doEditUse(sl) {
+  const user=document.getElementById('a-user')?.value.trim();
+  if (!user) { alert('Name required'); return; }
+  const stainType=document.getElementById('a-stain')?.value||'';
+  const antibody=document.getElementById('a-antibody')?.value||'';
+  const protocolVer=document.getElementById('a-protocol')?.value||'';
+  const usedFor=document.getElementById('a-notes')?.value||'';
+  const dateUsed=document.getElementById('a-date')?.value||sl.dateUsed||'';
+  Object.assign(sl,{usedBy:user,stainType,antibody,protocolVer,usedFor,dateUsed});
+  const log=makeLog(sl,'edited',user,[stainType,antibody,protocolVer]);
+  S.data.usageLog.push(log);
+  closeModal(); render();
+  await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
+}
+
+// ── NEW: Mark missing ────────────────────────────────────────────────────
+async function doMarkMissing(sl) {
+  const user = S.user?.name || 'unknown';
+  const log = makeLog(sl, 'missing', user, ['Slide marked missing']);
+  const prevBy = sl.usedBy;
+  Object.assign(sl,{status:'missing',notes:(sl.notes?sl.notes+'; ':'')+'Marked missing '+today()});
+  S.data.usageLog.push(log);
+  closeModal(); render();
+  await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
+}
+
+// ── NEW: Discard slide ───────────────────────────────────────────────────
+async function doDiscard(sl) {
+  const reason = prompt('Reason for discarding (optional):') ?? '';
+  const user = S.user?.name || 'unknown';
+  const log = makeLog(sl, 'discarded', user, [reason || 'Discarded']);
+  Object.assign(sl,{status:'discarded',notes:reason||'Discarded '+today()});
+  S.data.usageLog.push(log);
+  closeModal(); render();
+  await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
+}
+
+// ── NEW: Restore missing/discarded to free ────────────────────────────────
+async function doRestoreFree(sl) {
+  if (!confirm('Restore this slide as free?')) return;
+  const user = S.user?.name || 'unknown';
+  const log = makeLog(sl, 'released', user, ['Restored to free from '+sl.status]);
+  Object.assign(sl,{status:'free',usedBy:'',usedFor:'',stainType:'',antibody:'',protocolVer:'',dateUsed:'',notes:''});
+  S.data.usageLog.push(log);
+  closeModal(); render();
+  await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
+}
+
 // ── Export ────────────────────────────────────────────────────────────────
 function doExport() {
   const dump=JSON.stringify(S.data,null,0);
-  const script=`#!/usr/bin/env python3
-# SlideTrack pretty-printer — Usage: python3 pretty_print.py dump.json
-import json,sys
-from datetime import datetime
-with open(sys.argv[1]) as f: db=json.load(f)
-slides={s['id']:s for s in db['slides']}
-print("="*72)
-print(f"SLIDETRACK DUMP — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-print("="*72)
-for exp in db['experiments']:
-    exp_mice=[m for m in db['mice'] if m['expId']==exp['id']]
-    all_sl=[s for s in db['slides'] if any(s['mouseId']==m['id'] for m in exp_mice)]
-    free=sum(1 for s in all_sl if s['status']=='free')
-    res=sum(1 for s in all_sl if s['status']=='reserved')
-    used=sum(1 for s in all_sl if s['status']=='used')
-    print(f"\\n{'='*72}")
-    print(f"EXPERIMENT: {exp['id']}  {exp.get('name','')}  |  Free:{free} Res:{res} Used:{used}")
-    if exp.get('description'): print(f"  {exp['description']}")
-    for mouse in exp_mice:
-        msl=[s for s in db['slides'] if s['mouseId']==mouse['id']]
-        flags=[f for f,v in [('DEPLETED',mouse.get('depleted')),('LEGACY',mouse.get('legacy'))] if v=='true']
-        meta=' '.join(filter(None,[mouse.get('gender',''),mouse.get('weightG','')+'g' if mouse.get('weightG') else '',mouse.get('takedownAge',''),'Breeder:'+mouse.get('breederNo','') if mouse.get('breederNo') else '']))
-        print(f"\\n  MOUSE: {mouse['id']}{'  ['+', '.join(flags)+']' if flags else ''}  |  {meta}")
-        print(f"  Tissue:{mouse.get('tissueDate','—')}  Sectioned:{mouse.get('sectioningDate','—')}")
-        for b in sorted(set(s['batch'] for s in msl),key=lambda x:(x in('','null',None),x)):
-            bsl=sorted([s for s in msl if s['batch']==b],key=lambda x:int(x['slideNum']))
-            print(f"    [{'legacy' if b in ('','null',None) else 'Batch '+str(b)}]")
-            for s in bsl:
-                info=''
-                if s['status']!='free':
-                    info='  →  '+' '.join(filter(None,[s.get('usedBy'),s.get('stainType'),s.get('antibody'),s.get('protocolVer'),s.get('dateUsed')]))
-                print(f"      Slide {int(s['slideNum']):3d}  [{s['status'].upper():8s}]{info}")
-print("\\n"+"="*72+"\\nUSAGE LOG (newest first)\\n"+"="*72)
-for l in reversed(db.get('usageLog',[])):
-    print(f"  {l.get('timestamp',''):12}  {l.get('mouseId','?'):22}  B{l.get('batch','?'):3}  S{l.get('slideNum','?'):3}  {l.get('action','').upper():8}  {l.get('user','?'):14}  {l.get('details','')}")
-`;
-  [['dump.json',dump],['pretty_print.py',script]].forEach(([name,content])=>{
-    const b=new Blob([content],{type:'text/plain'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(b);a.download=name;a.click();
-  });
+  const b=new Blob([dump],{type:'text/plain'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='slidetrack_dump.json'; a.click();
 }
 
 // ── Events ────────────────────────────────────────────────────────────────
@@ -805,13 +1154,19 @@ function bindMain() {
   on('btn-admin',()=>{ S.isAdmin?(S.isAdmin=false,render()):modalPin(); });
   on('btn-export', doExport);
   on('btn-signout',()=>{ gToken=null;S.user=null;S.isAdmin=false;S.view='signin';render(); });
+  on('btn-project-switch', modalProjects);
   document.querySelectorAll('[data-tab]').forEach(el=>el.addEventListener('click',()=>{ S.tab=el.dataset.tab; render(); }));
 }
 
 function bindTab() {
-  document.querySelectorAll('[data-exp]').forEach(el=>el.addEventListener('click',()=>{
+  document.querySelectorAll('[data-exp]').forEach(el=>el.addEventListener('click', e=>{
+    if (e.target.closest('[data-del-exp]')) return;
     const id=el.dataset.exp; S.ui.expandedExps[id]=!S.ui.expandedExps[id];
     document.getElementById('tab-content').innerHTML=renderInventoryHTML(); bindTab();
+  }));
+  document.querySelectorAll('[data-del-exp]').forEach(el=>el.addEventListener('click', e=>{
+    e.stopPropagation();
+    doDeleteExp(el.dataset.delExp);
   }));
   document.querySelectorAll('[data-mouse]').forEach(el=>el.addEventListener('click',()=>{
     const id=el.dataset.mouse; S.ui.expandedMice[id]=!S.ui.expandedMice[id];
