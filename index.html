@@ -565,9 +565,12 @@ function renderInventoryHTML() {
               ${mouse.legacy==='true'?`<span class="badge b-legacy">Legacy</span>`:''}
             </div>
           </div>
-          <div style="text-align:right">
-            <div class="mouse-stats">Free:${mFree} Res:${mRes} Used:${mUsed}</div>
-            ${isMOpen?`<div class="adj-line">${adj}</div>`:''}
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="text-align:right">
+              <div class="mouse-stats">Free:${mFree} Res:${mRes} Used:${mUsed}</div>
+              ${isMOpen?`<div class="adj-line">${adj}</div>`:''}
+            </div>
+            ${S.isAdmin?`<button class="btn btn-sm btn-danger" data-del-mouse="${mouse.id}" title="Delete mouse">${SVG.trash}</button>`:''}
           </div>
         </div>
         ${isMOpen?`<div class="mouse-body">${batchHTML}${mouse.notes?`<div style="font-size:11px;color:var(--text2);margin-top:6px">${mouse.notes}</div>`:''}</div>`:''}
@@ -1082,6 +1085,16 @@ async function doDeleteExp(expId) {
   if (rowIdx) await persist(async () => { await deleteSheetRow(TAB.EXP, rowIdx); S.data = await loadAllData(); render(); });
 }
 
+async function doDeleteMouse(mouseId) {
+  const hasSlides = S.data.slides.some(s => s.mouseId === mouseId);
+  if (hasSlides) { alert('Cannot delete: this mouse still has slides. Remove all its slides/batches first.'); return; }
+  if (!confirm(`Delete mouse ${mouseId}? This cannot be undone.`)) return;
+  const rowIdx = rowMaps.mice[mouseId];
+  S.data.mice = S.data.mice.filter(m => m.id !== mouseId);
+  render();
+  if (rowIdx) await persist(async () => { await deleteSheetRow(TAB.MICE, rowIdx); S.data = await loadAllData(); render(); });
+}
+
 async function doAddMouse() {
   const expId=document.getElementById('m-exp')?.value;
   const num=document.getElementById('m-num')?.value.trim();
@@ -1275,9 +1288,14 @@ function bindTab() {
     e.stopPropagation();
     doDeleteExp(el.dataset.delExp);
   }));
-  document.querySelectorAll('[data-mouse]').forEach(el=>el.addEventListener('click',()=>{
+  document.querySelectorAll('[data-mouse]').forEach(el=>el.addEventListener('click',e=>{
+    if (e.target.closest('[data-del-mouse]')) return;
     const id=el.dataset.mouse; S.ui.expandedMice[id]=!S.ui.expandedMice[id];
     document.getElementById('tab-content').innerHTML=renderInventoryHTML(); bindTab();
+  }));
+  document.querySelectorAll('[data-del-mouse]').forEach(el=>el.addEventListener('click', e=>{
+    e.stopPropagation();
+    doDeleteMouse(el.dataset.delMouse);
   }));
   document.querySelectorAll('[data-slide]').forEach(el=>el.addEventListener('click',e=>{
     e.stopPropagation();
