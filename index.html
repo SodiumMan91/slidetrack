@@ -9,16 +9,9 @@
   CONFIGURATION — fill in these values before deploying
   ============================================================ -->
 <script>
-const CONFIG = {
-  // OAuth 2.0 Client ID from Google Cloud Console
+  const CONFIG = {
   GOOGLE_CLIENT_ID: '1030491418042-a1gkskcfnnjgukmqdro0o4sememtoucu.apps.googleusercontent.com',
-
-  // The long string in your Google Sheet URL between /d/ and /edit
-  SHEET_ID: '1s2q6jnsBfjgQHm_S8jPZJffZ6vMI07ZcHtjPD05BBAU',
-
-  // Admin PIN — for sheet-level admin actions
-  ADMIN_PIN: 'Hmgcs2!!',
-
+  WORKER_URL: 'https://twilight-frost-2dcb.nb3236.workers.dev/',
   // Allowed user emails — only these addresses can sign in
   // Leave empty [] to allow any Google account
   ALLOWED_EMAILS: [],
@@ -220,10 +213,13 @@ let gToken = null, tokenClient = null;
 
 // ── Sheets API ────────────────────────────────────────────────────────────
 async function sheetsReq(method, path, body) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}${path}`;
+  const url = `${CONFIG.WORKER_URL}/sheets${path}`;
   const res = await fetch(url, {
     method,
-    headers:{ Authorization:`Bearer ${gToken}`, 'Content-Type':'application/json' },
+    headers: {
+      'X-Google-Token': gToken,
+      'Content-Type': 'application/json',
+    },
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) { const t = await res.text(); throw new Error(`Sheets ${res.status}: ${t.slice(0,200)}`); }
@@ -914,9 +910,20 @@ function modalPin() {
     <div class="form-row"><label>PIN</label><input class="pin-field" id="pin" type="password" maxlength="12" autofocus/></div>
     <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-pin-ok">Unlock</button></div>
   </div>`);
-  const ok = () => {
-    if (document.getElementById('pin').value === CONFIG.ADMIN_PIN) { S.isAdmin=true; closeModal(); render(); }
-    else { const el=document.getElementById('pin'); el.value=''; el.placeholder='Wrong PIN, try again'; }
+  const ok = async () => {
+    const pin = document.getElementById('pin').value;
+    const resp = await fetch(`${CONFIG.WORKER_URL}/check-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin }),
+    });
+    const result = await resp.json();
+    if (result.ok) {
+      S.isAdmin = true; closeModal(); render();
+    } else {
+      const el = document.getElementById('pin');
+      el.value = ''; el.placeholder = 'Wrong PIN, try again';
+    }
   };
   document.getElementById('btn-pin-ok').addEventListener('click', ok);
   document.getElementById('pin').addEventListener('keydown', e=>{ if(e.key==='Enter') ok(); });
