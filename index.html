@@ -181,6 +181,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .action-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 /* Cascading select hint */
 .cascade-hint{font-size:11px;color:var(--text3);margin-top:3px}
+/* Stain lookup tab */
+.lookup-row{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
+.lookup-row select{font-size:13px;padding:5px 9px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface);color:var(--text);height:32px;min-width:140px}
+.lookup-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.lookup-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--text2);font-weight:700;padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap}
+.lookup-table td{padding:8px 12px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:top}
+.lookup-table tr:last-child td{border-bottom:none}
+.lookup-table tr:hover td{background:var(--bg)}
+.lookup-mouse-link{font-family:var(--mono);font-weight:700;cursor:pointer;color:var(--accent)}
+.lookup-mouse-link:hover{text-decoration:underline}
+.lookup-summary{font-size:12px;color:var(--text2);margin-bottom:.75rem}
 </style>
 </head>
 <body>
@@ -205,6 +216,7 @@ const S = {
   data:{ projects:[], experiments:[], mice:[], slides:[], usageLog:[] },
   ui:{ expandedExps:{}, expandedMice:{} },
   filter:{ organ:'all', status:'all', search:'' },
+  lookup:{ stainType:'all', antibody:'all' },
   loading:false, saving:false, error:null,
   slideRowMap:{},
 };
@@ -431,6 +443,7 @@ function render() {
     </div>
     <div class="tabs">
       <div class="tab ${S.tab==='inventory'?'active':''}" data-tab="inventory">Inventory</div>
+      <div class="tab ${S.tab==='lookup'?'active':''}" data-tab="lookup">By stain</div>
       <div class="tab ${S.tab==='log'?'active':''}" data-tab="log">Usage log</div>
     </div>
     <div id="tab-content"></div>
@@ -462,7 +475,7 @@ function renderTab() {
   if (S.loading) { el.innerHTML=`<div class="loader"><div class="spinner"></div> Loading from Google Sheets…</div>`; return; }
   let html = '';
   if (S.error) html += `<div class="err-box"><strong>Error:</strong> ${S.error} <button class="btn btn-sm" id="btn-dismiss">Dismiss</button></div>`;
-  html += S.tab==='inventory' ? renderInventoryHTML() : renderLogHTML();
+  html += S.tab==='inventory' ? renderInventoryHTML() : S.tab==='lookup' ? renderLookupHTML() : renderLogHTML();
   el.innerHTML = html;
   document.getElementById('btn-dismiss')?.addEventListener('click', ()=>{ S.error=null; renderTab(); });
   bindTab();
@@ -634,6 +647,112 @@ function renderLogHTML() {
       </div>
     </div>`;
   }).join('')+'</div>';
+}
+
+// ── Lookup tab: browse/export by stain type + antibody ───────────────────
+function lookupSlides() {
+  // Pulls from ALL slides (not just current project) since the point is to
+  // see every place a given stain/antibody combo has been used, lab-wide.
+  // Only slides that have actually been stained (used or reserved) are relevant.
+  return S.data.slides.filter(s => s.status === 'used' || s.status === 'reserved');
+}
+
+function renderLookupHTML() {
+  const all = lookupSlides();
+  const stainTypes = [...new Set(all.map(s => s.stainType).filter(Boolean))].sort();
+  const antibodies = [...new Set(all.map(s => s.antibody).filter(Boolean))].sort();
+
+  const { stainType, antibody } = S.lookup;
+  let results = all;
+  if (stainType !== 'all') results = results.filter(s => s.stainType === stainType);
+  if (antibody !== 'all') results = results.filter(s => s.antibody === antibody);
+
+  // newest first
+  results = [...results].sort((a,b) => (b.dateUsed||'').localeCompare(a.dateUsed||''));
+
+  const mouseById = Object.fromEntries(S.data.mice.map(m => [m.id, m]));
+  const expById = Object.fromEntries(S.data.experiments.map(e => [e.id, e]));
+
+  const rowsHTML = results.map(sl => {
+    const mouse = mouseById[sl.mouseId];
+    const exp = mouse ? expById[mouse.expId] : null;
+    const batchLbl = sl.batch !== null ? 'B' + sl.batch : 'legacy';
+    return `<tr>
+      <td><span class="lookup-mouse-link" data-slide="${sl.id}">${sl.mouseId}</span></td>
+      <td>${exp ? exp.id + (exp.name ? ' — ' + exp.name : '') : '—'}</td>
+      <td>${mouse?.organ || '—'}</td>
+      <td>${batchLbl} · S${sl.slideNum}</td>
+      <td>${sl.stainType || '—'}</td>
+      <td>${sl.antibody || '—'}</td>
+      <td>${sl.protocolVer || '—'}</td>
+      <td><span class="pill pill-${sl.status}">${sl.status}</span></td>
+      <td>${sl.dateUsed || '—'}</td>
+      <td>${sl.usedBy || '—'}</td>
+      <td>${sl.usedFor || sl.notes || ''}</td>
+    </tr>`;
+  }).join('');
+
+  const table = results.length ? `
+    <table class="lookup-table">
+      <thead><tr>
+        <th>Mouse</th><th>Experiment</th><th>Organ</th><th>Slide</th>
+        <th>Stain</th><th>Antibody/Probe</th><th>Protocol</th><th>Status</th><th>Date</th><th>By</th><th>Notes</th>
+      </tr></thead>
+      <tbody>${rowsHTML}</tbody>
+    </table>` : `<div class="empty">No stained slides match this combination yet.</div>`;
+
+  return `
+  <div class="lookup-row">
+    <select id="lk-stain">
+      <option value="all">All stain types</option>
+      ${stainTypes.map(s=>`<option value="${s}" ${stainType===s?'selected':''}>${s}</option>`).join('')}
+    </select>
+    <select id="lk-antibody">
+      <option value="all">All antibodies/probes</option>
+      ${antibodies.map(a=>`<option value="${a}" ${antibody===a?'selected':''}>${a}</option>`).join('')}
+    </select>
+    <button class="btn btn-sm" id="btn-lookup-download">${SVG.download} Download CSV</button>
+  </div>
+  <div class="lookup-summary">${results.length} slide${results.length===1?'':'s'} found${stainType!=='all'?' · '+stainType:''}${antibody!=='all'?' · '+antibody:''}</div>
+  ${table}`;
+}
+
+function downloadLookupCSV() {
+  const { stainType, antibody } = S.lookup;
+  let results = lookupSlides();
+  if (stainType !== 'all') results = results.filter(s => s.stainType === stainType);
+  if (antibody !== 'all') results = results.filter(s => s.antibody === antibody);
+  results = [...results].sort((a,b) => (b.dateUsed||'').localeCompare(a.dateUsed||''));
+
+  const mouseById = Object.fromEntries(S.data.mice.map(m => [m.id, m]));
+  const expById = Object.fromEntries(S.data.experiments.map(e => [e.id, e]));
+
+  const headers = ['mouseId','experiment','organ','batch','slideNum','stainType','antibody','protocolVer','status','dateUsed','usedBy','usedFor','notes'];
+  const csvRows = [headers.join(',')];
+  results.forEach(sl => {
+    const mouse = mouseById[sl.mouseId];
+    const exp = mouse ? expById[mouse.expId] : null;
+    const row = [
+      sl.mouseId, exp?.id||'', mouse?.organ||'', sl.batch!==null?sl.batch:'legacy', sl.slideNum,
+      sl.stainType||'', sl.antibody||'', sl.protocolVer||'', sl.status, sl.dateUsed||'', sl.usedBy||'',
+      sl.usedFor||'', sl.notes||'',
+    ];
+    csvRows.push(row.map(csvEscape).join(','));
+  });
+
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const parts = ['slidetrack'];
+  if (stainType !== 'all') parts.push(stainType);
+  if (antibody !== 'all') parts.push(antibody);
+  a.download = parts.join('_').replace(/[^a-z0-9_]+/gi,'_') + '.csv';
+  a.click();
+}
+
+function csvEscape(val) {
+  const s = String(val ?? '');
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
 }
 
 // ── Datalists ─────────────────────────────────────────────────────────────
@@ -1191,6 +1310,16 @@ function bindTab() {
   document.getElementById('btn-add-exp')?.addEventListener('click', modalAddExp);
   document.getElementById('btn-add-mouse')?.addEventListener('click', modalAddMouse);
   document.getElementById('btn-add-batch')?.addEventListener('click', modalAddBatch);
+
+  // Lookup tab
+  const relookup=()=>{ document.getElementById('tab-content').innerHTML=renderLookupHTML(); bindTab(); };
+  document.getElementById('lk-stain')?.addEventListener('change',e=>{ S.lookup.stainType=e.target.value; relookup(); });
+  document.getElementById('lk-antibody')?.addEventListener('change',e=>{ S.lookup.antibody=e.target.value; relookup(); });
+  document.getElementById('btn-lookup-download')?.addEventListener('click', downloadLookupCSV);
+  document.querySelectorAll('.lookup-mouse-link[data-slide]').forEach(el=>el.addEventListener('click',()=>{
+    const sl=S.data.slides.find(s=>s.id===el.dataset.slide);
+    if(sl) modalSlide(sl);
+  }));
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────
