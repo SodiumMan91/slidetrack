@@ -94,6 +94,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .b-legacy{background:var(--bg);color:var(--text3);border:1px solid var(--border)}
 .mouse-stats{font-size:11px;color:var(--text3);font-family:var(--mono);white-space:nowrap}
 .mouse-body{padding:.75rem 1.1rem .75rem 1.5rem;background:var(--bg)}
+.animal-block{border-bottom:1px solid var(--border)}
+.animal-block:last-child{border-bottom:none}
+.animal-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.1rem .75rem 1.5rem;cursor:pointer;gap:10px}
+.animal-header:hover{background:var(--bg)}
+.animal-id{font-size:14px;font-weight:700;font-family:var(--mono)}
+.animal-meta{font-size:11px;color:var(--text2);margin-top:1px}
+.animal-body{padding:.5rem 0 .85rem 0;background:var(--bg)}
+.tissue-block{margin:0 1.1rem .6rem 2rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.tissue-header{display:flex;align-items:center;justify-content:space-between;padding:.6rem .9rem;cursor:pointer;gap:10px}
+.tissue-header:hover{background:var(--bg)}
+.tissue-body{padding:.65rem .9rem;border-top:1px solid var(--border);background:var(--surface)}
 .batch-block{margin-bottom:.75rem}
 .batch-block:last-child{margin-bottom:0}
 .batch-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
@@ -194,13 +205,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <div id="app"></div>
 <script>
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
-const TAB = { PROJECTS:'projects', EXP:'experiments', MICE:'mice', SLIDES:'slides', LOG:'usage_log', INJ:'injections' };
+const TAB = { PROJECTS:'projects', EXP:'experiments', MICE:'mice', TISSUES:'tissues', SLIDES:'slides', LOG:'usage_log', INJ:'injections' };
 const COLS = {
   PROJECTS:['id','name','description','color'],
   EXP:     ['id','projectId','name','description'],
-  MICE:    ['id','expId','mouseNum','organ','breederNo','gender','weightG','takedownAge','tissueDate','sectioningDate','depleted','legacy','notes','dob'],
-  SLIDES:  ['id','mouseId','batch','slideNum','status','usedBy','usedFor','stainType','antibody','protocolVer','dateUsed','notes'],
-  LOG:     ['timestamp','slideId','action','user','mouseId','batch','slideNum','details'],
+  MICE:    ['id','expId','mouseNum','breederNo','gender','weightG','takedownAge','depleted','legacy','notes','dob'],
+  TISSUES: ['id','mouseId','organ','tissueDate','sectioningDate','notes'],
+  SLIDES:  ['id','tissueId','batch','slideNum','status','usedBy','usedFor','stainType','antibody','protocolVer','dateUsed','notes'],
+  LOG:     ['timestamp','slideId','action','user','tissueId','batch','slideNum','details'],
   INJ:     ['id','mouseId','date','substance','weightBeforeG','notes'],
 };
 
@@ -210,12 +222,11 @@ const S = {
   view:'signin', tab:'inventory',
   user:null, isAdmin:false,
   currentProjectId: null,
-  data:{ projects:[], experiments:[], mice:[], slides:[], usageLog:[], injections:[] },
-  ui:{ expandedExps:{}, expandedMice:{} },
+  data:{ projects:[], experiments:[], mice:[], tissues:[], slides:[], usageLog:[], injections:[] },
+  ui:{ expandedExps:{}, expandedMice:{}, expandedTissues:{} },
   filter:{ organ:'all', status:'all', search:'' },
   lookup:{ stainType:'all', antibody:'all' },
   loading:false, saving:false, error:null,
-  slideRowMap:{},
 };
 
 let gToken = null, tokenClient = null;
@@ -291,13 +302,14 @@ async function ensureHeaders() {
     [TAB.PROJECTS, COLS.PROJECTS],
     [TAB.EXP, COLS.EXP],
     [TAB.MICE, COLS.MICE],
+    [TAB.TISSUES, COLS.TISSUES],
     [TAB.SLIDES, COLS.SLIDES],
     [TAB.LOG, COLS.LOG],
     [TAB.INJ, COLS.INJ],
   ];
 
   // Auto-create any tab that doesn't exist yet in the spreadsheet (e.g. a new
-  // sheet added after the workbook was first set up, like 'injections').
+  // sheet added after the workbook was first set up, like 'tissues').
   let meta;
   try { meta = await getSpreadsheetMeta(); } catch(e) { meta = null; }
   const existingTitles = meta ? new Set(meta.sheets.map(s => s.properties.title)) : null;
@@ -310,19 +322,19 @@ async function ensureHeaders() {
     const rows = await readTab(tab);
     if (rows.length === 0) { await appendRow(tab, cols); continue; }
     // Backward-compat: if a field was added to COLS since this sheet's header
-    // row was created (e.g. 'dob'), extend the header row so new columns line up.
+    // row was created, extend the header row so new columns line up.
     const header = rows[0];
     if (header.length < cols.length) { await updateSheetRow(tab, 1, cols); }
   }
 }
 
 // Row index maps: tab → { id → rowIndex (1-based, accounting for header) }
-const rowMaps = { projects:{}, experiments:{}, mice:{}, slides:{}, injections:{} };
+const rowMaps = { projects:{}, experiments:{}, mice:{}, tissues:{}, slides:{}, injections:{} };
 
 async function loadAllData() {
   await ensureHeaders();
-  const [projRows, expRows, miceRows, slideRows, logRows, injRows] = await Promise.all([
-    readTab(TAB.PROJECTS), readTab(TAB.EXP), readTab(TAB.MICE), readTab(TAB.SLIDES), readTab(TAB.LOG), readTab(TAB.INJ),
+  const [projRows, expRows, miceRows, tissueRows, slideRows, logRows, injRows] = await Promise.all([
+    readTab(TAB.PROJECTS), readTab(TAB.EXP), readTab(TAB.MICE), readTab(TAB.TISSUES), readTab(TAB.SLIDES), readTab(TAB.LOG), readTab(TAB.INJ),
   ]);
   function parse(rows, cols, mapKey) {
     if (rows.length < 2) return [];
@@ -346,6 +358,7 @@ async function loadAllData() {
     projects: parse(projRows, COLS.PROJECTS, 'projects'),
     experiments: parse(expRows, COLS.EXP, 'experiments'),
     mice: parse(miceRows, COLS.MICE, 'mice'),
+    tissues: parse(tissueRows, COLS.TISSUES, 'tissues'),
     slides,
     usageLog: parse(logRows, COLS.LOG),
     injections: parse(injRows, COLS.INJ, 'injections'),
@@ -455,9 +468,22 @@ function projectMice() {
   const exps = new Set(projectExperiments().map(e => e.id));
   return S.data.mice.filter(m => exps.has(m.expId));
 }
-function projectSlides() {
+function mouseTissues(mouseId) {
+  return S.data.tissues.filter(t => t.mouseId === mouseId);
+}
+function projectTissues() {
   const miceIds = new Set(projectMice().map(m => m.id));
-  return S.data.slides.filter(s => miceIds.has(s.mouseId));
+  return S.data.tissues.filter(t => miceIds.has(t.mouseId));
+}
+function tissueSlides(tissueId) {
+  return S.data.slides.filter(s => s.tissueId === tissueId);
+}
+function projectSlides() {
+  const tIds = new Set(projectTissues().map(t => t.id));
+  return S.data.slides.filter(s => tIds.has(s.tissueId));
+}
+function tissueById(id) {
+  return S.data.tissues.find(t => t.id === id);
 }
 function mouseInjections(mouseId) {
   return S.data.injections.filter(i => i.mouseId === mouseId)
@@ -531,6 +557,7 @@ function renderTab() {
 function renderInventoryHTML() {
   const slides = projectSlides();
   const mice   = projectMice();
+  const tissues = projectTissues();
   const experiments = projectExperiments();
 
   const {organ, status, search} = S.filter;
@@ -539,24 +566,23 @@ function renderInventoryHTML() {
   const totalUsed      = slides.filter(s=>s.status==='used').length;
   const totalMissing   = slides.filter(s=>s.status==='missing').length;
   const totalDiscarded = slides.filter(s=>s.status==='discarded').length;
-  const organs = [...new Set(mice.map(m=>m.organ))].filter(Boolean);
+  const organs = [...new Set(tissues.map(t=>t.organ))].filter(Boolean);
+  const searchLower = search.toLowerCase();
 
   let exps = [...experiments].sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}));
   if (search) exps = exps.filter(e =>
-    e.id.toLowerCase().includes(search.toLowerCase()) ||
-    (e.name||'').toLowerCase().includes(search.toLowerCase()) ||
-    mice.some(m=>m.expId===e.id && m.id.toLowerCase().includes(search.toLowerCase()))
+    e.id.toLowerCase().includes(searchLower) ||
+    (e.name||'').toLowerCase().includes(searchLower) ||
+    mice.some(m=>m.expId===e.id && (m.id.toLowerCase().includes(searchLower) || mouseTissues(m.id).some(t=>(t.organ||'').toLowerCase().includes(searchLower))))
   );
-  if (organ !== 'all') exps = exps.filter(e => mice.some(m=>m.expId===e.id && m.organ===organ));
+  if (organ !== 'all') exps = exps.filter(e => mice.some(m=>m.expId===e.id && mouseTissues(m.id).some(t=>t.organ===organ)));
 
   let expHTML = '';
   exps.forEach(exp => {
     const expMice = mice.filter(m=>m.expId===exp.id)
-      .sort((a,b) => {
-        const nA = parseInt(a.mouseNum)||0, nB = parseInt(b.mouseNum)||0;
-        return nA !== nB ? nA - nB : a.organ.localeCompare(b.organ);
-      });
-    const expSlides = slides.filter(s=>expMice.some(m=>m.id===s.mouseId));
+      .sort((a,b) => (parseInt(a.mouseNum)||0) - (parseInt(b.mouseNum)||0));
+    const expTissueIds = new Set(expMice.flatMap(m=>mouseTissues(m.id).map(t=>t.id)));
+    const expSlides = slides.filter(s=>expTissueIds.has(s.tissueId));
     if (status!=='all' && !expSlides.some(s=>s.status===status)) return;
     const eFree=expSlides.filter(s=>s.status==='free').length;
     const eRes=expSlides.filter(s=>s.status==='reserved').length;
@@ -565,39 +591,74 @@ function renderInventoryHTML() {
 
     let miceHTML = '';
     expMice.forEach(mouse => {
-      if (organ!=='all' && mouse.organ!==organ) return;
-      const mSlides = slides.filter(s=>s.mouseId===mouse.id);
-      if (status!=='all' && !mSlides.some(s=>s.status===status)) return;
-      const mFree=mSlides.filter(s=>s.status==='free').length;
-      const mRes=mSlides.filter(s=>s.status==='reserved').length;
-      const mUsed=mSlides.filter(s=>s.status==='used').length;
-      const adj = computeAdjacency(mSlides);
+      let mTissues = mouseTissues(mouse.id);
+      if (organ!=='all') mTissues = mTissues.filter(t=>t.organ===organ);
+      const mSlidesAll = mTissues.flatMap(t=>tissueSlides(t.id));
+      if (status!=='all' && !mSlidesAll.some(s=>s.status===status)) return;
+      if (organ!=='all' && mTissues.length===0) return;
+      const mFree=mSlidesAll.filter(s=>s.status==='free').length;
+      const mRes=mSlidesAll.filter(s=>s.status==='reserved').length;
+      const mUsed=mSlidesAll.filter(s=>s.status==='used').length;
       const isMOpen = S.ui.expandedMice[mouse.id];
 
-      const batches = [...new Set(mSlides.map(s=>s.batch))].sort((a,b)=>a===null?-1:b===null?1:a-b);
-      let batchHTML = '';
-      batches.forEach(bk => {
-        const bSlides = mSlides.filter(s=>s.batch===bk).sort((a,b)=>a.slideNum-b.slideNum);
-        const lbl = bk===null ? 'Legacy (no batch)' : `Batch ${bk}`;
-        const btns = bSlides.map(sl => {
-          const cls = sl.status==='free'?'slide-free'
-            :sl.status==='reserved'?'slide-reserved'
-            :sl.status==='missing'?'slide-missing'
-            :sl.status==='discarded'?'slide-discarded'
-            :'slide-used';
-          const tip = sl.status==='free'?'Free — click to use or reserve'
-            :sl.status==='reserved'?`Reserved: ${sl.usedBy||'?'} · ${sl.antibody||sl.usedFor||''}`
-            :sl.status==='missing'?`Missing — last seen: ${sl.dateUsed||'?'}`
-            :sl.status==='discarded'?`Discarded: ${sl.notes||''}`
-            :`Used: ${sl.usedBy||'?'} · ${sl.antibody||''} ${sl.dateUsed||''}`;
-          const label = sl.status==='missing'?'?':sl.status==='discarded'?'✕':sl.slideNum;
-          return `<button class="slide-btn ${cls}" data-slide="${sl.id}" title="${tip}">${label}</button>`;
-        }).join('');
-        batchHTML += `<div class="batch-block"><div class="batch-label">${lbl}</div><div class="slides-row">${btns}</div></div>`;
+      let tissueHTML = '';
+      mTissues.forEach(tissue => {
+        const tSlides = tissueSlides(tissue.id).sort((a,b)=>a.slideNum-b.slideNum);
+        if (status!=='all' && !tSlides.some(s=>s.status===status)) return;
+        const tFree=tSlides.filter(s=>s.status==='free').length;
+        const tRes=tSlides.filter(s=>s.status==='reserved').length;
+        const tUsed=tSlides.filter(s=>s.status==='used').length;
+        const isTOpen = S.ui.expandedTissues[tissue.id];
+        const adj = computeAdjacency(tSlides);
+
+        const batches = [...new Set(tSlides.map(s=>s.batch))].sort((a,b)=>a===null?-1:b===null?1:a-b);
+        let batchHTML = '';
+        batches.forEach(bk => {
+          const bSlides = tSlides.filter(s=>s.batch===bk).sort((a,b)=>a.slideNum-b.slideNum);
+          const lbl = bk===null ? 'Legacy (no batch)' : `Batch ${bk}`;
+          const btns = bSlides.map(sl => {
+            const cls = sl.status==='free'?'slide-free'
+              :sl.status==='reserved'?'slide-reserved'
+              :sl.status==='missing'?'slide-missing'
+              :sl.status==='discarded'?'slide-discarded'
+              :'slide-used';
+            const tip = sl.status==='free'?'Free — click to use or reserve'
+              :sl.status==='reserved'?`Reserved: ${sl.usedBy||'?'} · ${sl.antibody||sl.usedFor||''}`
+              :sl.status==='missing'?`Missing — last seen: ${sl.dateUsed||'?'}`
+              :sl.status==='discarded'?`Discarded: ${sl.notes||''}`
+              :`Used: ${sl.usedBy||'?'} · ${sl.antibody||''} ${sl.dateUsed||''}`;
+            const label = sl.status==='missing'?'?':sl.status==='discarded'?'✕':sl.slideNum;
+            return `<button class="slide-btn ${cls}" data-slide="${sl.id}" title="${tip}">${label}</button>`;
+          }).join('');
+          batchHTML += `<div class="batch-block"><div class="batch-label">${lbl}</div><div class="slides-row">${btns}</div></div>`;
+        });
+
+        const tMeta = [tissue.tissueDate?'Tissue:'+tissue.tissueDate:'', tissue.sectioningDate?'Sectioning:'+tissue.sectioningDate:''].filter(Boolean).join(' · ');
+
+        tissueHTML += `<div class="tissue-block">
+          <div class="tissue-header" data-tissue="${tissue.id}">
+            <div>
+              <span class="badge b-organ">${tissue.organ}</span>
+              ${tMeta?`<div class="mouse-meta" style="margin-top:4px">${tMeta}</div>`:''}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="text-align:right">
+                <div class="mouse-stats">Free:${tFree} Res:${tRes} Used:${tUsed}</div>
+                ${isTOpen?`<div class="adj-line">${adj}</div>`:''}
+              </div>
+              ${S.isAdmin?`<button class="btn btn-sm" data-edit-tissue="${tissue.id}" title="Edit tissue">${SVG.edit}</button>`:''}
+              ${S.isAdmin?`<button class="btn btn-sm btn-danger" data-del-tissue="${tissue.id}" title="Delete tissue">${SVG.trash}</button>`:''}
+              <span class="exp-chevron ${isTOpen?'open':''}">${SVG.chevron}</span>
+            </div>
+          </div>
+          ${isTOpen?`<div class="tissue-body">${batchHTML || '<div style="font-size:11px;color:var(--text3)">No slides yet.</div>'}
+            ${S.isAdmin?`<div style="margin-top:8px"><button class="btn btn-sm" data-add-batch-tissue="${tissue.id}">${SVG.plus} Batch</button></div>`:''}
+          </div>`:''}
+        </div>`;
       });
 
       const meta = [mouse.gender, mouse.weightG?mouse.weightG+'g':'', mouse.takedownAge,
-        mouse.dob?'DOB:'+mouse.dob:'', mouse.tissueDate?'Tissue:'+mouse.tissueDate:'', mouse.breederNo?'Breeder:'+mouse.breederNo:''].filter(Boolean).join(' · ');
+        mouse.dob?'DOB:'+mouse.dob:'', mouse.breederNo?'Breeder:'+mouse.breederNo:''].filter(Boolean).join(' · ');
 
       const injections = mouseInjections(mouse.id);
       const injRowsHTML = injections.map(inj => `
@@ -617,13 +678,12 @@ function renderInventoryHTML() {
           <tbody>${injRowsHTML}</tbody>
         </table>` : `<div style="font-size:11px;color:var(--text3)">No injections logged.</div>`;
 
-      miceHTML += `<div class="mouse-block">
-        <div class="mouse-header" data-mouse="${mouse.id}">
+      miceHTML += `<div class="animal-block">
+        <div class="animal-header" data-mouse="${mouse.id}">
           <div>
-            <div class="mouse-id">${mouse.id}</div>
-            <div class="mouse-meta">${meta}</div>
+            <div class="animal-id">${mouse.id}</div>
+            <div class="animal-meta">${meta}</div>
             <div class="mouse-badges">
-              <span class="badge b-organ">${mouse.organ}</span>
               ${mouse.depleted==='true'?`<span class="badge b-depleted">Depleted</span>`:''}
               ${mouse.legacy==='true'?`<span class="badge b-legacy">Legacy</span>`:''}
             </div>
@@ -631,21 +691,24 @@ function renderInventoryHTML() {
           <div style="display:flex;align-items:center;gap:8px">
             <div style="text-align:right">
               <div class="mouse-stats">Free:${mFree} Res:${mRes} Used:${mUsed}</div>
-              ${isMOpen?`<div class="adj-line">${adj}</div>`:''}
             </div>
             ${S.isAdmin?`<button class="btn btn-sm" data-edit-mouse="${mouse.id}" title="Edit mouse">${SVG.edit}</button>`:''}
             ${S.isAdmin?`<button class="btn btn-sm btn-danger" data-del-mouse="${mouse.id}" title="Delete mouse">${SVG.trash}</button>`:''}
+            <span class="exp-chevron ${isMOpen?'open':''}">${SVG.chevron}</span>
           </div>
         </div>
-        ${isMOpen?`<div class="mouse-body">${batchHTML}
-          <div class="batch-block">
+        ${isMOpen?`<div class="animal-body">
+          ${tissueHTML || '<div class="empty" style="padding:1rem 1.5rem">No tissues/organs yet.</div>'}
+          <div style="margin:.5rem 1.1rem 0 1.1rem">
             <div class="batch-label" style="display:flex;align-items:center;justify-content:space-between">
               <span>Injections</span>
               <button class="btn btn-sm" data-add-injection="${mouse.id}" style="padding:2px 8px">${SVG.plus} Injection</button>
             </div>
             ${injTableHTML}
           </div>
-          ${mouse.notes?`<div style="font-size:11px;color:var(--text2);margin-top:6px">${mouse.notes}</div>`:''}</div>`:''}
+          ${S.isAdmin?`<div style="margin:.75rem 1.1rem 0 1.1rem"><button class="btn btn-sm" data-add-tissue="${mouse.id}">${SVG.plus} Tissue/organ</button></div>`:''}
+          ${mouse.notes?`<div style="font-size:11px;color:var(--text2);margin:.5rem 1.1rem 0 1.1rem">${mouse.notes}</div>`:''}
+        </div>`:''}
       </div>`;
     });
 
@@ -680,6 +743,7 @@ function renderInventoryHTML() {
     <div class="stat-card"><div class="stat-val" style="color:var(--slate)">${totalDiscarded}</div><div class="stat-lbl">Discarded</div></div>
     <div class="stat-card"><div class="stat-val">${experiments.length}</div><div class="stat-lbl">Experiments</div></div>
     <div class="stat-card"><div class="stat-val">${mice.length}</div><div class="stat-lbl">Mice</div></div>
+    <div class="stat-card"><div class="stat-val">${tissues.length}</div><div class="stat-lbl">Tissues</div></div>
   </div>
   <div class="legend">
     <div class="legend-item"><div class="leg-dot leg-free"></div>Free</div>
@@ -727,17 +791,19 @@ function renderLookupHTML() {
   // newest first
   results = [...results].sort((a,b) => (b.dateUsed||'').localeCompare(a.dateUsed||''));
 
+  const tissueByIdMap = Object.fromEntries(S.data.tissues.map(t => [t.id, t]));
   const mouseById = Object.fromEntries(S.data.mice.map(m => [m.id, m]));
   const expById = Object.fromEntries(S.data.experiments.map(e => [e.id, e]));
 
   const rowsHTML = results.map(sl => {
-    const mouse = mouseById[sl.mouseId];
+    const tissue = tissueByIdMap[sl.tissueId];
+    const mouse = tissue ? mouseById[tissue.mouseId] : null;
     const exp = mouse ? expById[mouse.expId] : null;
     const batchLbl = sl.batch !== null ? 'B' + sl.batch : 'legacy';
     return `<tr>
-      <td><span class="lookup-mouse-link" data-slide="${sl.id}">${sl.mouseId}</span></td>
+      <td><span class="lookup-mouse-link" data-slide="${sl.id}">${mouse ? mouse.id : '—'}</span></td>
       <td>${exp ? exp.id + (exp.name ? ' — ' + exp.name : '') : '—'}</td>
-      <td>${mouse?.organ || '—'}</td>
+      <td>${tissue?.organ || '—'}</td>
       <td>${batchLbl} · S${sl.slideNum}</td>
       <td>${sl.stainType || '—'}</td>
       <td>${sl.antibody || '—'}</td>
@@ -781,16 +847,18 @@ function downloadLookupCSV() {
   if (antibody !== 'all') results = results.filter(s => s.antibody === antibody);
   results = [...results].sort((a,b) => (b.dateUsed||'').localeCompare(a.dateUsed||''));
 
+  const tissueByIdMap = Object.fromEntries(S.data.tissues.map(t => [t.id, t]));
   const mouseById = Object.fromEntries(S.data.mice.map(m => [m.id, m]));
   const expById = Object.fromEntries(S.data.experiments.map(e => [e.id, e]));
 
   const headers = ['mouseId','experiment','organ','batch','slideNum','stainType','antibody','protocolVer','status','dateUsed','usedBy','usedFor','notes'];
   const csvRows = [headers.join(',')];
   results.forEach(sl => {
-    const mouse = mouseById[sl.mouseId];
+    const tissue = tissueByIdMap[sl.tissueId];
+    const mouse = tissue ? mouseById[tissue.mouseId] : null;
     const exp = mouse ? expById[mouse.expId] : null;
     const row = [
-      sl.mouseId, exp?.id||'', mouse?.organ||'', sl.batch!==null?sl.batch:'legacy', sl.slideNum,
+      mouse?mouse.id:'', exp?.id||'', tissue?.organ||'', sl.batch!==null?sl.batch:'legacy', sl.slideNum,
       sl.stainType||'', sl.antibody||'', sl.protocolVer||'', sl.status, sl.dateUsed||'', sl.usedBy||'',
       sl.usedFor||'', sl.notes||'',
     ];
@@ -834,7 +902,9 @@ function closeModal() { document.getElementById('modal-area').innerHTML = ''; }
 
 // ── Slide detail modal ────────────────────────────────────────────────────
 function modalSlide(sl) {
-  const ref = `${sl.mouseId} · ${sl.batch!==null?'Batch '+sl.batch:'Legacy'} · Slide ${sl.slideNum}`;
+  const tissue = tissueById(sl.tissueId);
+  const mouse = tissue ? S.data.mice.find(m=>m.id===tissue.mouseId) : null;
+  const ref = `${mouse?mouse.id:'?'} · ${tissue?tissue.organ:'?'} · ${sl.batch!==null?'Batch '+sl.batch:'Legacy'} · Slide ${sl.slideNum}`;
   const isFree = sl.status==='free', isReserved = sl.status==='reserved', isUsed = sl.status==='used';
   const isMissing = sl.status==='missing', isDiscarded = sl.status==='discarded';
 
@@ -966,14 +1036,11 @@ function modalAddMouse() {
   if (!S.data.experiments.length) { alert('Add an experiment first.'); return; }
   const expOpts = projectExperiments().map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('');
   showModal(`<div class="modal"><h3>Add mouse</h3>
-    <div class="info-box">ID will be generated as <strong>ExpID#N-Organ</strong>, e.g. <strong>Exp39#2-SI</strong></div>
+    <div class="info-box">ID will be generated as <strong>ExpID#N</strong>, e.g. <strong>Exp39#2</strong>. Add tissues/organs for this mouse afterward (or right when you add a batch of slides).</div>
     <div class="form-row"><label>Experiment *</label>
       <select id="m-exp">${expOpts}</select>
     </div>
-    <div class="form-2col">
-      <div class="form-row"><label>Mouse # *</label><input id="m-num" type="number" placeholder="1" min="1"/></div>
-      <div class="form-row"><label>Organ *</label><select id="m-organ"><option>SI</option><option>Liver</option><option>Col</option><option>GF</option><option>Other</option></select></div>
-    </div>
+    <div class="form-row"><label>Mouse # *</label><input id="m-num" type="number" placeholder="1" min="1"/></div>
     <div class="form-2col">
       <div class="form-row"><label>Gender <span class="optional-tag">optional</span></label><select id="m-gender"><option value="">—</option><option>M</option><option>F</option></select></div>
       <div class="form-row"><label>Weight at takedown (g) <span class="optional-tag">optional</span></label><input id="m-weight" type="number" placeholder="25.3" step="0.1"/></div>
@@ -982,11 +1049,7 @@ function modalAddMouse() {
       <div class="form-row"><label>Date of birth <span class="optional-tag">optional</span></label><input id="m-dob" type="date"/></div>
       <div class="form-row"><label>Takedown age <span class="optional-tag">optional</span></label><input id="m-age" placeholder="P14"/></div>
     </div>
-    <div class="form-2col">
-      <div class="form-row"><label>Breeder no. <span class="optional-tag">optional</span></label><input id="m-breeder" placeholder="B123"/></div>
-      <div class="form-row"><label>Tissue date <span class="optional-tag">optional</span></label><input id="m-tissue" type="date"/></div>
-    </div>
-    <div class="form-row"><label>Sectioning date <span class="optional-tag">optional</span></label><input id="m-section" type="date"/></div>
+    <div class="form-row"><label>Breeder no. <span class="optional-tag">optional</span></label><input id="m-breeder" placeholder="B123"/></div>
     <div class="form-row" style="display:flex;gap:20px">
       <label class="form-check"><input type="checkbox" id="m-depleted"> Depleted</label>
       <label class="form-check"><input type="checkbox" id="m-legacy"> Legacy</label>
@@ -1009,11 +1072,7 @@ function modalEditMouse(mouse) {
       <div class="form-row"><label>Date of birth <span class="optional-tag">optional</span></label><input id="m-dob" type="date" value="${mouse.dob||''}"/></div>
       <div class="form-row"><label>Takedown age <span class="optional-tag">optional</span></label><input id="m-age" value="${mouse.takedownAge||''}" placeholder="P14"/></div>
     </div>
-    <div class="form-2col">
-      <div class="form-row"><label>Breeder no. <span class="optional-tag">optional</span></label><input id="m-breeder" value="${mouse.breederNo||''}"/></div>
-      <div class="form-row"><label>Tissue date <span class="optional-tag">optional</span></label><input id="m-tissue" type="date" value="${mouse.tissueDate||''}"/></div>
-    </div>
-    <div class="form-row"><label>Sectioning date <span class="optional-tag">optional</span></label><input id="m-section" type="date" value="${mouse.sectioningDate||''}"/></div>
+    <div class="form-row"><label>Breeder no. <span class="optional-tag">optional</span></label><input id="m-breeder" value="${mouse.breederNo||''}"/></div>
     <div class="form-row" style="display:flex;gap:20px">
       <label class="form-check"><input type="checkbox" id="m-depleted" ${mouse.depleted==='true'?'checked':''}> Depleted</label>
       <label class="form-check"><input type="checkbox" id="m-legacy" ${mouse.legacy==='true'?'checked':''}> Legacy</label>
@@ -1024,41 +1083,185 @@ function modalEditMouse(mouse) {
   document.getElementById('btn-save-edit-mouse').addEventListener('click', ()=>doEditMouse(mouse.id));
 }
 
-// ── Batch modal with cascading experiment → mouse selector ────────────────
-function modalAddBatch() {
+// ── Tissue / organ modal (add or edit) ─────────────────────────────────────
+function modalAddTissue(mouseId, existing) {
+  const isEdit = !!existing;
+  showModal(`<div class="modal"><h3>${isEdit?'Edit':'Add'} tissue / organ</h3>
+    <div class="slide-ref">${mouseId}</div>
+    <div class="form-row"><label>Organ *</label>
+      <select id="t-organ">
+        ${['SI','Liver','Col','GF','Other'].map(o=>`<option ${existing?.organ===o?'selected':''}>${o}</option>`).join('')}
+      </select></div>
+    <div class="form-2col">
+      <div class="form-row"><label>Tissue date <span class="optional-tag">optional</span></label><input id="t-tissue-date" type="date" value="${existing?.tissueDate||''}"/></div>
+      <div class="form-row"><label>Sectioning date <span class="optional-tag">optional</span></label><input id="t-section-date" type="date" value="${existing?.sectioningDate||''}"/></div>
+    </div>
+    <div class="form-row"><label>Notes <span class="optional-tag">optional</span></label><textarea id="t-notes">${existing?.notes||''}</textarea></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      ${isEdit?`<button class="btn btn-danger" id="btn-del-tissue">Delete</button>`:''}
+      <button class="btn btn-primary" id="btn-save-tissue">${isEdit?'Save changes':'Add tissue'}</button>
+    </div>
+  </div>`);
+  document.getElementById('btn-save-tissue').addEventListener('click', ()=>doSaveTissue(mouseId, existing));
+  document.getElementById('btn-del-tissue')?.addEventListener('click', ()=>doDeleteTissue(existing.id));
+}
+
+function uniqueTissueId(mouseId, organ) {
+  let base = `${mouseId}-${organ}`, id = base, n=2;
+  while (S.data.tissues.some(t=>t.id===id)) { id = `${base}-${n}`; n++; }
+  return id;
+}
+
+async function doSaveTissue(mouseId, existing) {
+  const organ=document.getElementById('t-organ')?.value;
+  if (!organ) { alert('Organ required'); return; }
+  const tissueDate=document.getElementById('t-tissue-date')?.value||'';
+  const sectioningDate=document.getElementById('t-section-date')?.value||'';
+  const notes=document.getElementById('t-notes')?.value.trim();
+  if (existing) {
+    Object.assign(existing, { organ, tissueDate, sectioningDate, notes });
+    closeModal(); render();
+    const rowIdx = rowMaps.tissues[existing.id];
+    if (rowIdx) await persist(async () => { await updateSheetRow(TAB.TISSUES, rowIdx, objToRow(COLS.TISSUES, existing)); });
+  } else {
+    const id = uniqueTissueId(mouseId, organ);
+    const tissue = { id, mouseId, organ, tissueDate, sectioningDate, notes };
+    S.data.tissues.push(tissue);
+    S.ui.expandedMice[mouseId]=true;
+    closeModal(); render();
+    await persist(async () => { await appendRow(TAB.TISSUES, objToRow(COLS.TISSUES, tissue)); S.data = await loadAllData(); render(); });
+  }
+}
+
+async function doDeleteTissue(tissueId) {
+  const hasSlides = S.data.slides.some(s => s.tissueId === tissueId);
+  if (hasSlides) { alert('Cannot delete: this tissue still has slides. Remove all its batches first.'); return; }
+  if (!confirm('Delete this tissue/organ record?')) return;
+  const rowIdx = rowMaps.tissues[tissueId];
+  S.data.tissues = S.data.tissues.filter(t => t.id !== tissueId);
+  closeModal(); render();
+  if (rowIdx) await persist(async () => { await deleteSheetRow(TAB.TISSUES, rowIdx); S.data = await loadAllData(); render(); });
+}
+
+// ── Batch modal with cascading Experiment → Mouse → Tissue selector ───────
+function modalAddBatch(presetTissueId) {
   if (!S.data.mice.length) { alert('Add a mouse first.'); return; }
+  const presetTissue = presetTissueId ? S.data.tissues.find(t=>t.id===presetTissueId) : null;
+  const presetMouse = presetTissue ? S.data.mice.find(m=>m.id===presetTissue.mouseId) : null;
+
   const exps = projectExperiments();
-  const expOpts = exps.map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('');
+  const expOpts = exps.map(e=>`<option value="${e.id}" ${presetMouse?.expId===e.id?'selected':''}>${e.id}${e.name?' — '+e.name:''}</option>`).join('');
 
   showModal(`<div class="modal"><h3>Add batch / slides</h3>
     <div class="form-row"><label>Experiment *</label>
-      <select id="b-exp">${expOpts || '<option value="">— no experiments —</option>'}</select>
-      <div class="cascade-hint">Select experiment first to filter mice</div>
+      <select id="b-exp" ${presetTissue?'disabled':''}>${expOpts || '<option value="">— no experiments —</option>'}</select>
     </div>
     <div class="form-row"><label>Mouse *</label>
-      <select id="b-mouse"><option value="">— select experiment first —</option></select>
+      <select id="b-mouse" ${presetTissue?'disabled':''}><option value="">— select experiment first —</option></select>
+    </div>
+    <div class="form-row"><label>Tissue / organ *</label>
+      <select id="b-tissue" ${presetTissue?'disabled':''}><option value="">— select mouse first —</option></select>
+      <div class="cascade-hint">Choose an existing tissue for this mouse, or add a new organ right here</div>
+    </div>
+    <div id="b-new-tissue-fields" style="display:none">
+      <div class="form-row"><label>New organ *</label>
+        <select id="b-new-organ"><option>SI</option><option>Liver</option><option>Col</option><option>GF</option><option>Other</option></select></div>
+      <div class="form-2col">
+        <div class="form-row"><label>Tissue date <span class="optional-tag">optional</span></label><input id="b-new-tissue-date" type="date"/></div>
+        <div class="form-row"><label>Sectioning date <span class="optional-tag">optional</span></label><input id="b-new-section-date" type="date"/></div>
+      </div>
     </div>
     <div class="form-2col">
       <div class="form-row"><label>Batch number <span class="optional-tag">blank = legacy</span></label><input id="b-num" type="number" placeholder="3" min="1"/></div>
-      <div class="form-row"><label>Sectioning date <span class="optional-tag">optional</span></label><input id="b-date" type="date"/></div>
+      <div class="form-row"><label>Number of slides *</label><input id="b-count" type="number" placeholder="5" min="1" max="200"/></div>
     </div>
-    <div class="form-row"><label>Number of slides *</label><input id="b-count" type="number" placeholder="5" min="1" max="200"/></div>
     <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-save-batch">Add slides</button></div>
   </div>`);
 
-  // Populate mice on experiment change
   function updateMiceList() {
     const expId = document.getElementById('b-exp')?.value;
     const miceForExp = S.data.mice.filter(m => m.expId === expId);
     const sel = document.getElementById('b-mouse');
     if (sel) sel.innerHTML = miceForExp.length
-      ? miceForExp.map(m=>`<option value="${m.id}">${m.id} (${m.organ})</option>`).join('')
+      ? miceForExp.map(m=>`<option value="${m.id}">${m.id}</option>`).join('')
       : '<option value="">— no mice in this experiment —</option>';
+    updateTissueList();
   }
-  document.getElementById('b-exp')?.addEventListener('change', updateMiceList);
-  updateMiceList(); // initial populate
+  function updateTissueList() {
+    const mouseId = document.getElementById('b-mouse')?.value;
+    const tissuesForMouse = S.data.tissues.filter(t => t.mouseId === mouseId);
+    const sel = document.getElementById('b-tissue');
+    if (sel) sel.innerHTML =
+      tissuesForMouse.map(t=>`<option value="${t.id}">${t.organ}${t.tissueDate?' · '+t.tissueDate:''}</option>`).join('')
+      + `<option value="__new__" ${!tissuesForMouse.length?'selected':''}>+ New tissue/organ…</option>`;
+    toggleNewTissueFields();
+  }
+  function toggleNewTissueFields() {
+    const val = document.getElementById('b-tissue')?.value;
+    document.getElementById('b-new-tissue-fields').style.display = (val==='__new__') ? 'block' : 'none';
+  }
 
-  document.getElementById('btn-save-batch').addEventListener('click', doAddBatch);
+  document.getElementById('b-exp')?.addEventListener('change', updateMiceList);
+  document.getElementById('b-mouse')?.addEventListener('change', updateTissueList);
+  document.getElementById('b-tissue')?.addEventListener('change', toggleNewTissueFields);
+
+  if (presetTissue) {
+    document.getElementById('b-exp').innerHTML = `<option value="${presetMouse.expId}" selected>${presetMouse.expId}</option>`;
+    document.getElementById('b-mouse').innerHTML = `<option value="${presetMouse.id}" selected>${presetMouse.id}</option>`;
+    document.getElementById('b-tissue').innerHTML = `<option value="${presetTissue.id}" selected>${presetTissue.organ}</option>`;
+    toggleNewTissueFields();
+  } else {
+    updateMiceList();
+  }
+
+  document.getElementById('btn-save-batch').addEventListener('click', ()=>doAddBatch(presetTissueId));
+}
+
+async function doAddBatch(presetTissueId) {
+  let tissueId = presetTissueId || document.getElementById('b-tissue')?.value;
+  const mouseId = document.getElementById('b-mouse')?.value
+    || (presetTissueId ? (S.data.tissues.find(t=>t.id===presetTissueId)||{}).mouseId : null);
+  if (!mouseId) { alert('Select a mouse'); return; }
+
+  let newTissue = null;
+  if (tissueId === '__new__') {
+    const organ = document.getElementById('b-new-organ')?.value;
+    if (!organ) { alert('Select an organ'); return; }
+    newTissue = {
+      id: uniqueTissueId(mouseId, organ), mouseId, organ,
+      tissueDate: document.getElementById('b-new-tissue-date')?.value||'',
+      sectioningDate: document.getElementById('b-new-section-date')?.value||'',
+      notes:'',
+    };
+    tissueId = newTissue.id;
+  }
+  if (!tissueId) { alert('Select a tissue/organ'); return; }
+
+  const batchRaw=document.getElementById('b-num')?.value.trim();
+  const batch=batchRaw===''?null:parseInt(batchRaw);
+  const count=parseInt(document.getElementById('b-count')?.value)||0;
+  if (!count) { alert('Number of slides required'); return; }
+
+  if (newTissue) S.data.tissues.push(newTissue);
+  const existing=S.data.slides.filter(s=>s.tissueId===tissueId&&s.batch===batch);
+  const startNum=existing.length+1;
+  const newSlides=[];
+  for (let i=0;i<count;i++) {
+    const sl={ id:uid(), tissueId, batch:batch===null?'':String(batch), slideNum:startNum+i,
+      status:'free', usedBy:'', usedFor:'', stainType:'', antibody:'', protocolVer:'', dateUsed:'', notes:'' };
+    newSlides.push(sl);
+    S.data.slides.push({...sl, batch, slideNum:startNum+i});
+  }
+  const mouse = S.data.mice.find(m=>m.id===mouseId);
+  if (mouse) { S.ui.expandedExps[mouse.expId]=true; S.ui.expandedMice[mouse.id]=true; }
+  S.ui.expandedTissues[tissueId]=true;
+  closeModal(); render();
+  await persist(async () => {
+    if (newTissue) await appendRow(TAB.TISSUES, objToRow(COLS.TISSUES, newTissue));
+    for (const sl of newSlides) await appendRow(TAB.SLIDES, objToRow(COLS.SLIDES, sl));
+    S.data = await loadAllData(); render();
+  });
 }
 
 // ── Injection modal (add / edit) ──────────────────────────────────────────
@@ -1251,7 +1454,7 @@ async function doEditExp(expId) {
 
 async function doDeleteExp(expId) {
   const hasMice = S.data.mice.some(m => m.expId === expId);
-  if (hasMice) { alert('Cannot delete: experiment still has mice. Remove all mice (and their slides) first.'); return; }
+  if (hasMice) { alert('Cannot delete: experiment still has mice. Remove all mice (and their tissues/slides) first.'); return; }
   if (!confirm(`Delete experiment ${expId}? This cannot be undone.`)) return;
   const rowIdx = rowMaps.experiments[expId];
   S.data.experiments = S.data.experiments.filter(e => e.id !== expId);
@@ -1260,8 +1463,8 @@ async function doDeleteExp(expId) {
 }
 
 async function doDeleteMouse(mouseId) {
-  const hasSlides = S.data.slides.some(s => s.mouseId === mouseId);
-  if (hasSlides) { alert('Cannot delete: this mouse still has slides. Remove all its slides/batches first.'); return; }
+  const hasTissues = S.data.tissues.some(t => t.mouseId === mouseId);
+  if (hasTissues) { alert('Cannot delete: this mouse still has tissues/organs. Remove them first.'); return; }
   if (!confirm(`Delete mouse ${mouseId}? This cannot be undone.`)) return;
   const rowIdx = rowMaps.mice[mouseId];
   S.data.mice = S.data.mice.filter(m => m.id !== mouseId);
@@ -1272,18 +1475,15 @@ async function doDeleteMouse(mouseId) {
 async function doAddMouse() {
   const expId=document.getElementById('m-exp')?.value;
   const num=document.getElementById('m-num')?.value.trim();
-  const organ=document.getElementById('m-organ')?.value;
   if (!num) { alert('Mouse number required'); return; }
-  const mouseId=`${expId}#${num}-${organ}`;
+  const mouseId=`${expId}#${num}`;
   if (S.data.mice.find(m=>m.id===mouseId)) { alert(`${mouseId} already exists`); return; }
   const mouse = {
-    id:mouseId, expId, mouseNum:num, organ,
+    id:mouseId, expId, mouseNum:num,
     breederNo:document.getElementById('m-breeder')?.value.trim(),
     gender:document.getElementById('m-gender')?.value,
     weightG:document.getElementById('m-weight')?.value.trim(),
     takedownAge:document.getElementById('m-age')?.value.trim(),
-    tissueDate:document.getElementById('m-tissue')?.value,
-    sectioningDate:document.getElementById('m-section')?.value,
     depleted:document.getElementById('m-depleted')?.checked?'true':'false',
     legacy:document.getElementById('m-legacy')?.checked?'true':'false',
     notes:document.getElementById('m-notes')?.value.trim(),
@@ -1304,8 +1504,6 @@ async function doEditMouse(mouseId) {
     dob:document.getElementById('m-dob')?.value||'',
     takedownAge:document.getElementById('m-age')?.value.trim(),
     breederNo:document.getElementById('m-breeder')?.value.trim(),
-    tissueDate:document.getElementById('m-tissue')?.value,
-    sectioningDate:document.getElementById('m-section')?.value,
     depleted:document.getElementById('m-depleted')?.checked?'true':'false',
     legacy:document.getElementById('m-legacy')?.checked?'true':'false',
     notes:document.getElementById('m-notes')?.value.trim(),
@@ -1313,31 +1511,6 @@ async function doEditMouse(mouseId) {
   closeModal(); render();
   const rowIdx = rowMaps.mice[mouseId];
   if (rowIdx) await persist(async () => { await updateSheetRow(TAB.MICE, rowIdx, objToRow(COLS.MICE, mouse)); });
-}
-
-async function doAddBatch() {
-  const mouseId=document.getElementById('b-mouse')?.value;
-  if (!mouseId) { alert('Select a mouse'); return; }
-  const batchRaw=document.getElementById('b-num')?.value.trim();
-  const batch=batchRaw===''?null:parseInt(batchRaw);
-  const count=parseInt(document.getElementById('b-count')?.value)||0;
-  if (!count) { alert('Number of slides required'); return; }
-  const existing=S.data.slides.filter(s=>s.mouseId===mouseId&&s.batch===batch);
-  const startNum=existing.length+1;
-  const newSlides=[];
-  for (let i=0;i<count;i++) {
-    const sl={ id:uid(), mouseId, batch:batch===null?'':String(batch), slideNum:startNum+i,
-      status:'free', usedBy:'', usedFor:'', stainType:'', antibody:'', protocolVer:'', dateUsed:'', notes:'' };
-    newSlides.push(sl);
-    S.data.slides.push({...sl, batch});
-  }
-  const mouse=S.data.mice.find(m=>m.id===mouseId);
-  if (mouse) { S.ui.expandedExps[mouse.expId]=true; S.ui.expandedMice[mouseId]=true; }
-  closeModal(); render();
-  await persist(async () => {
-    for (const sl of newSlides) await appendRow(TAB.SLIDES, objToRow(COLS.SLIDES, sl));
-    S.data = await loadAllData(); render();
-  });
 }
 
 // ── Injection mutations ───────────────────────────────────────────────────
@@ -1370,7 +1543,7 @@ async function doDeleteInjection(injId) {
 }
 
 function makeLog(sl, action, user, details) {
-  return { timestamp:today(), slideId:sl.id, action, user, mouseId:sl.mouseId,
+  return { timestamp:today(), slideId:sl.id, action, user, tissueId:sl.tissueId,
     batch:sl.batch!==null?String(sl.batch):'legacy', slideNum:String(sl.slideNum),
     details:details.filter(Boolean).join(' · ') };
 }
@@ -1420,7 +1593,7 @@ async function doRelease(sl) {
   await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
 }
 
-// ── NEW: Remove use (mark free again) ────────────────────────────────────
+// ── Remove use (mark free again) ────────────────────────────────────────
 async function doRemoveUse(sl) {
   if (!confirm('Remove use record and mark slide as free again?')) return;
   const user = S.user?.name || 'admin';
@@ -1431,7 +1604,7 @@ async function doRemoveUse(sl) {
   await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
 }
 
-// ── NEW: Edit use details ────────────────────────────────────────────────
+// ── Edit use details ─────────────────────────────────────────────────────
 async function doEditUse(sl) {
   const user=document.getElementById('a-user')?.value.trim();
   if (!user) { alert('Name required'); return; }
@@ -1447,18 +1620,17 @@ async function doEditUse(sl) {
   await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
 }
 
-// ── NEW: Mark missing ────────────────────────────────────────────────────
+// ── Mark missing ─────────────────────────────────────────────────────────
 async function doMarkMissing(sl) {
   const user = S.user?.name || 'unknown';
   const log = makeLog(sl, 'missing', user, ['Slide marked missing']);
-  const prevBy = sl.usedBy;
   Object.assign(sl,{status:'missing',notes:(sl.notes?sl.notes+'; ':'')+'Marked missing '+today()});
   S.data.usageLog.push(log);
   closeModal(); render();
   await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
 }
 
-// ── NEW: Discard slide ───────────────────────────────────────────────────
+// ── Discard slide ────────────────────────────────────────────────────────
 async function doDiscard(sl) {
   const reason = prompt('Reason for discarding (optional):') ?? '';
   const user = S.user?.name || 'unknown';
@@ -1469,7 +1641,7 @@ async function doDiscard(sl) {
   await persist(async()=>{ await syncSlide(sl); await appendRow(TAB.LOG, objToRow(COLS.LOG, log)); });
 }
 
-// ── NEW: Restore missing/discarded to free ────────────────────────────────
+// ── Restore missing/discarded to free ────────────────────────────────────
 async function doRestoreFree(sl) {
   if (!confirm('Restore this slide as free?')) return;
   const user = S.user?.name || 'unknown';
@@ -1530,6 +1702,28 @@ function bindTab() {
     const mouse = S.data.mice.find(x=>x.id===el.dataset.editMouse);
     if (mouse) modalEditMouse(mouse);
   }));
+  document.querySelectorAll('[data-tissue]').forEach(el=>el.addEventListener('click', e=>{
+    if (e.target.closest('[data-del-tissue]') || e.target.closest('[data-edit-tissue]')) return;
+    const id=el.dataset.tissue; S.ui.expandedTissues[id]=!S.ui.expandedTissues[id];
+    document.getElementById('tab-content').innerHTML=renderInventoryHTML(); bindTab();
+  }));
+  document.querySelectorAll('[data-del-tissue]').forEach(el=>el.addEventListener('click', e=>{
+    e.stopPropagation();
+    doDeleteTissue(el.dataset.delTissue);
+  }));
+  document.querySelectorAll('[data-edit-tissue]').forEach(el=>el.addEventListener('click', e=>{
+    e.stopPropagation();
+    const tissue = S.data.tissues.find(x=>x.id===el.dataset.editTissue);
+    if (tissue) modalAddTissue(tissue.mouseId, tissue);
+  }));
+  document.querySelectorAll('[data-add-tissue]').forEach(el=>el.addEventListener('click', e=>{
+    e.stopPropagation();
+    modalAddTissue(el.dataset.addTissue, null);
+  }));
+  document.querySelectorAll('[data-add-batch-tissue]').forEach(el=>el.addEventListener('click', e=>{
+    e.stopPropagation();
+    modalAddBatch(el.dataset.addBatchTissue);
+  }));
   document.querySelectorAll('[data-slide]').forEach(el=>el.addEventListener('click',e=>{
     e.stopPropagation();
     const sl=S.data.slides.find(s=>s.id===el.dataset.slide);
@@ -1554,7 +1748,7 @@ function bindTab() {
   document.getElementById('flt-status')?.addEventListener('change',e=>{ S.filter.status=e.target.value; refilter(); });
   document.getElementById('btn-add-exp')?.addEventListener('click', modalAddExp);
   document.getElementById('btn-add-mouse')?.addEventListener('click', modalAddMouse);
-  document.getElementById('btn-add-batch')?.addEventListener('click', modalAddBatch);
+  document.getElementById('btn-add-batch')?.addEventListener('click', ()=>modalAddBatch());
 
   // Lookup tab
   const relookup=()=>{ document.getElementById('tab-content').innerHTML=renderLookupHTML(); bindTab(); };
