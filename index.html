@@ -276,6 +276,16 @@ function objToRow(cols, obj) {
   return cols.map(c => obj[c] !== undefined ? String(obj[c]) : '');
 }
 
+async function getSpreadsheetMeta() {
+  return sheetsReq('GET', '');
+}
+
+async function createSheetTab(tab) {
+  await sheetsReq('POST', ':batchUpdate', {
+    requests:[{ addSheet: { properties: { title: tab } } }]
+  });
+}
+
 async function ensureHeaders() {
   const tabs = [
     [TAB.PROJECTS, COLS.PROJECTS],
@@ -285,7 +295,18 @@ async function ensureHeaders() {
     [TAB.LOG, COLS.LOG],
     [TAB.INJ, COLS.INJ],
   ];
+
+  // Auto-create any tab that doesn't exist yet in the spreadsheet (e.g. a new
+  // sheet added after the workbook was first set up, like 'injections').
+  let meta;
+  try { meta = await getSpreadsheetMeta(); } catch(e) { meta = null; }
+  const existingTitles = meta ? new Set(meta.sheets.map(s => s.properties.title)) : null;
+
   for (const [tab, cols] of tabs) {
+    if (existingTitles && !existingTitles.has(tab)) {
+      await createSheetTab(tab);
+      existingTitles.add(tab);
+    }
     const rows = await readTab(tab);
     if (rows.length === 0) { await appendRow(tab, cols); continue; }
     // Backward-compat: if a field was added to COLS since this sheet's header
@@ -371,8 +392,10 @@ function initTokenClient() {
         return;
       }
 
-      // Check allow-list (lives server-side in the Worker's ALLOWED_EMAILS env var).
-      // Fail closed: if this check can't be completed, treat as not allowed.
+      // Check allow-list + admin rights (lives server-side: the Worker reads
+      // the lab's 'users' sheet via a service account). Fail closed: if this
+      // check can't be completed, treat as not allowed.
+      let isAdmin = false;
       try {
         const accessResp = await fetch(`${CONFIG.WORKER_URL}/check-access`, {
           method: 'POST',
@@ -384,11 +407,13 @@ function initTokenClient() {
           window.location.href = 'access-denied.html';
           return;
         }
+        isAdmin = !!access.isAdmin;
       } catch(e) {
         window.location.href = 'access-denied.html';
         return;
       }
 
+      S.isAdmin = isAdmin;
       S.user = { name: userInfo.name, email: userEmail, picture: userInfo.picture };
       S.view = 'app'; S.loading = true; render();
       try {
@@ -459,7 +484,7 @@ function render() {
         ${S.saving ? `<span class="saving">Saving…</span>` : ''}
         ${S.user ? `<div class="user-chip">${S.user.picture?`<img src="${S.user.picture}">`:''}${S.user.name||S.user.email}</div>` : ''}
         <button class="btn btn-sm" id="btn-refresh">${SVG.refresh} Refresh</button>
-        <button class="btn btn-sm" id="btn-admin">${S.isAdmin?SVG.unlock:SVG.lock} ${S.isAdmin?'Admin on':'Admin'}</button>
+        ${S.isAdmin ? `<span class="btn btn-sm" style="cursor:default" title="Admin rights come from the users sheet — ask whoever manages it to change this">${SVG.unlock} Admin</span>` : ''}
         <button class="btn btn-sm" id="btn-export">${SVG.download} Export</button>
         <button class="btn btn-sm btn-danger" id="btn-signout">${SVG.logout}</button>
       </div>
@@ -1156,31 +1181,6 @@ function modalEditProject(proj) {
   document.getElementById('btn-save-edit-proj').addEventListener('click', ()=>doEditProject(proj.id));
 }
 
-function modalPin() {
-  showModal(`<div class="modal"><h3>Admin access</h3>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Enter the lab admin PIN.</p>
-    <div class="form-row"><label>PIN</label><input class="pin-field" id="pin" type="password" maxlength="12" autofocus/></div>
-    <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-pin-ok">Unlock</button></div>
-  </div>`);
-  const ok = async () => {
-    const pin = document.getElementById('pin').value;
-    const resp = await fetch(`${CONFIG.WORKER_URL}/check-pin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin }),
-    });
-    const result = await resp.json();
-    if (result.ok) {
-      S.isAdmin = true; closeModal(); render();
-    } else {
-      const el = document.getElementById('pin');
-      el.value = ''; el.placeholder = 'Wrong PIN, try again';
-    }
-  };
-  document.getElementById('btn-pin-ok').addEventListener('click', ok);
-  document.getElementById('pin').addEventListener('keydown', e=>{ if(e.key==='Enter') ok(); });
-}
-
 // ── Mutations ─────────────────────────────────────────────────────────────
 const today = () => new Date().toISOString().split('T')[0];
 const uid   = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
@@ -1495,7 +1495,6 @@ function bindMain() {
     try { S.data=await loadAllData(); } catch(e) { S.error=e.message; }
     S.loading=false; renderTab();
   });
-  on('btn-admin',()=>{ S.isAdmin?(S.isAdmin=false,render()):modalPin(); });
   on('btn-export', doExport);
   on('btn-signout',()=>{ gToken=null;S.user=null;S.isAdmin=false;S.view='signin';render(); });
   on('btn-project-switch', modalProjects);
