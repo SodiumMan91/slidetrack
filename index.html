@@ -1088,7 +1088,10 @@ function modalEditExp(exp) {
 // ── Mouse modal ───────────────────────────────────────────────────────────
 function modalAddMouse() {
   if (!S.data.experiments.length) { alert('Add an experiment first.'); return; }
-  const expOpts = projectExperiments().map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('');
+  // const expOpts = projectExperiments().map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('');
+  const expOpts = [...projectExperiments()]
+    .sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}))
+    .map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('');
   showModal(`<div class="modal"><h3>Add mouse</h3>
     <div class="info-box">ID will be generated as <strong>ExpID#N</strong>, e.g. <strong>Exp39#2</strong>. Add tissues/organs for this mouse afterward (or right when you add a batch of slides).</div>
     <div class="form-row"><label>Experiment *</label>
