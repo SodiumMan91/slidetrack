@@ -949,6 +949,12 @@ function substanceDatalist() {
   const substances = [...new Set(S.data.injections.map(i=>i.substance).filter(Boolean))].sort();
   return `<datalist id="substance-list">${substances.map(a=>`<option value="${a}">`).join('')}</datalist>`;
 }
+function organDatalist() {
+  const defaults = ['SI','Liver','Col','GF'];
+  const seen = S.data.tissues.map(t=>t.organ).filter(Boolean);
+  const all = [...new Set([...defaults, ...seen])].sort();
+  return `<datalist id="organ-list">${all.map(o=>`<option value="${o}">`).join('')}</datalist>`;
+}
 
 function showModal(html) {
   document.getElementById('modal-area').innerHTML = `<div class="overlay" id="overlay">${html}</div>`;
@@ -1149,10 +1155,10 @@ function modalAddTissue(mouseId, existing) {
   const isEdit = !!existing;
   showModal(`<div class="modal"><h3>${isEdit?'Edit':'Add'} tissue / organ</h3>
     <div class="slide-ref">${mouseId}</div>
-    <div class="form-row"><label>Organ *</label>
-      <select id="t-organ">
-        ${['SI','Liver','Col','GF','Other'].map(o=>`<option ${existing?.organ===o?'selected':''}>${o}</option>`).join('')}
-      </select></div>
+  ${organDatalist()}
+  <div class="form-row"><label>Organ *</label>
+    <input id="t-organ" list="organ-list" value="${existing?.organ||''}" placeholder="SI, Liver, Col, GF…"/>
+  </div>
     <div class="form-row">
       <div class="form-row"><label>Sectioning date <span class="optional-tag">optional</span></label><input id="t-section-date" type="date" value="${existing?.sectioningDate||''}"/></div>
     </div>
@@ -1224,8 +1230,10 @@ function modalAddBatch(presetTissueId) {
       <div class="cascade-hint">Choose an existing tissue for this mouse, or add a new organ right here</div>
     </div>
     <div id="b-new-tissue-fields" style="display:none">
+      ${organDatalist()}
       <div class="form-row"><label>New organ *</label>
-        <select id="b-new-organ"><option>SI</option><option>Liver</option><option>Col</option><option>GF</option><option>Other</option></select></div>
+        <input id="b-new-organ" list="organ-list" placeholder="SI, Liver, Col, GF…"/>
+      </div>
       <div class="form-col">
         <div class="form-row"><label>Sectioning date <span class="optional-tag">optional</span></label><input id="b-new-section-date" type="date"/></div>
       </div>
