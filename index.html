@@ -253,6 +253,13 @@ async function readTab(tab) {
   } catch(e) { console.warn('readTab', tab, e.message); return []; }
 }
 
+// Strict version for ensureHeaders — unlike readTab(), a failed request here
+// must NOT be treated as "the sheet is empty." It throws instead of returning [].
+async function readTabStrict(tab) {
+  const res = await sheetsReq('GET', `/values/${encodeURIComponent(tab)}`);
+  return res.values || [];
+}
+
 async function appendRow(tab, row) {
   await sheetsReq('POST', `/values/${encodeURIComponent(tab)}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, { values:[row] });
 }
@@ -308,23 +315,24 @@ async function ensureHeaders() {
     [TAB.INJ, COLS.INJ],
   ];
 
-  // Auto-create any tab that doesn't exist yet in the spreadsheet (e.g. a new
-  // sheet added after the workbook was first set up, like 'tissues').
-  let meta;
-  try { meta = await getSpreadsheetMeta(); } catch(e) { meta = null; }
-  const existingTitles = meta ? new Set(meta.sheets.map(s => s.properties.title)) : null;
+  // Let this throw — don't silently assume tabs don't exist if the check fails.
+  const meta = await getSpreadsheetMeta();
+  const existingTitles = new Set(meta.sheets.map(s => s.properties.title));
 
   for (const [tab, cols] of tabs) {
-    if (existingTitles && !existingTitles.has(tab)) {
+    if (!existingTitles.has(tab)) {
       await createSheetTab(tab);
       existingTitles.add(tab);
     }
-    const rows = await readTab(tab);
+    const rows = await readTabStrict(tab); // throws instead of returning [] on failure
     if (rows.length === 0) { await appendRow(tab, cols); continue; }
     // Backward-compat: if a field was added to COLS since this sheet's header
     // row was created, extend the header row so new columns line up.
     const header = rows[0];
     if (header.length < cols.length) { await updateSheetRow(tab, 1, cols); }
+    // Belt-and-suspenders: never append a header row if row 1 already looks
+    // like one, regardless of column count.
+    else if (header[0] !== 'id' && header[0] !== 'timestamp') { await updateSheetRow(tab, 1, cols); }
   }
 }
 
@@ -1259,7 +1267,7 @@ function modalAddBatch(presetTissueId) {
     const tissuesForMouse = S.data.tissues.filter(t => t.mouseId === mouseId);
     const sel = document.getElementById('b-tissue');
     if (sel) sel.innerHTML =
-      tissuesForMouse.map(t=>`<option value="${t.id}">${t.organ}${t.tissueDate?' · '+t.tissueDate:''}</option>`).join('')
+      tissuesForMouse.map(t=>`<option value="${t.id}">${t.organ}${t.sectioningDate?' · '+t.sectioningDate:''}</option>`).join('')
       + `<option value="__new__" ${!tissuesForMouse.length?'selected':''}>+ New tissue/organ…</option>`;
     toggleNewTissueFields();
   }
@@ -1296,7 +1304,6 @@ async function doAddBatch(presetTissueId) {
     if (!organ) { alert('Select an organ'); return; }
     newTissue = {
       id: uniqueTissueId(mouseId, organ), mouseId, organ,
-      tissueDate: document.getElementById('b-new-tissue-date')?.value||'',
       sectioningDate: document.getElementById('b-new-section-date')?.value||'',
       notes:'',
     };
