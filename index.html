@@ -720,6 +720,7 @@ function renderInventoryHTML() {
           <div style="font-size:11px;color:var(--text3);margin-top:3px">Free:${eFree} · Res:${eRes} · Used:${eUsed} · Mice:${expMice.length}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-sm" data-export-exp="${exp.id}" title="Download all records for this experiment">${SVG.download}</button>
           ${S.isAdmin?`<button class="btn btn-sm" data-edit-exp="${exp.id}" title="Edit experiment">${SVG.edit}</button>`:''}
           ${S.isAdmin?`<button class="btn btn-sm btn-danger" data-del-exp="${exp.id}" title="Delete experiment">${SVG.trash}</button>`:''}
           <span class="exp-chevron ${isOpen?'open':''}">${SVG.chevron}</span>
@@ -878,6 +879,59 @@ function downloadLookupCSV() {
 function csvEscape(val) {
   const s = String(val ?? '');
   return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+
+// ── Export all records for one experiment ─────────────────────────────────
+function doExportExperiment(exp) {
+  const mice = S.data.mice.filter(m => m.expId === exp.id);
+  const mouseIds = new Set(mice.map(m => m.id));
+  const tissues = S.data.tissues.filter(t => mouseIds.has(t.mouseId));
+  const tissueIds = new Set(tissues.map(t => t.id));
+  const slides = S.data.slides.filter(s => tissueIds.has(s.tissueId));
+  const injections = S.data.injections.filter(i => mouseIds.has(i.mouseId));
+  const slideIds = new Set(slides.map(s => s.id));
+  const logs = S.data.usageLog.filter(l => slideIds.has(l.slideId));
+
+  const tissueByIdMap = Object.fromEntries(tissues.map(t => [t.id, t]));
+
+  const sections = [];
+
+  sections.push([`EXPERIMENT: ${exp.id}${exp.name ? ' — ' + exp.name : ''}`]);
+  sections.push([]);
+
+  sections.push(['MICE']);
+  sections.push(['id','mouseNum','breederNo','gender','weightG','takedownAge','depleted','legacy','dob','notes']);
+  mice.forEach(m => sections.push([m.id,m.mouseNum,m.breederNo,m.gender,m.weightG,m.takedownAge,m.depleted,m.legacy,m.dob,m.notes]));
+  sections.push([]);
+
+  sections.push(['TISSUES']);
+  sections.push(['id','mouseId','organ','tissueDate','sectioningDate','notes']);
+  tissues.forEach(t => sections.push([t.id,t.mouseId,t.organ,t.tissueDate,t.sectioningDate,t.notes]));
+  sections.push([]);
+
+  sections.push(['SLIDES']);
+  sections.push(['id','mouseId','organ','tissueId','batch','slideNum','status','usedBy','stainType','antibody','protocolVer','dateUsed','usedFor','notes']);
+  slides.forEach(s => {
+    const t = tissueByIdMap[s.tissueId];
+    sections.push([s.id, t?t.mouseId:'', t?t.organ:'', s.tissueId, s.batch!==null?s.batch:'legacy', s.slideNum, s.status, s.usedBy, s.stainType, s.antibody, s.protocolVer, s.dateUsed, s.usedFor, s.notes]);
+  });
+  sections.push([]);
+
+  sections.push(['INJECTIONS']);
+  sections.push(['id','mouseId','date','substance','weightBeforeG','notes']);
+  injections.forEach(i => sections.push([i.id,i.mouseId,i.date,i.substance,i.weightBeforeG,i.notes]));
+  sections.push([]);
+
+  sections.push(['USAGE LOG']);
+  sections.push(['timestamp','slideId','action','user','batch','slideNum','details']);
+  logs.forEach(l => sections.push([l.timestamp,l.slideId,l.action,l.user,l.batch,l.slideNum,l.details]));
+
+  const csv = sections.map(row => row.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `slidetrack_${exp.id}_export.csv`.replace(/[^a-z0-9_.]+/gi, '_');
+  a.click();
 }
 
 // ── Datalists ─────────────────────────────────────────────────────────────
@@ -1675,7 +1729,7 @@ function bindMain() {
 
 function bindTab() {
   document.querySelectorAll('[data-exp]').forEach(el=>el.addEventListener('click', e=>{
-    if (e.target.closest('[data-del-exp]') || e.target.closest('[data-edit-exp]')) return;
+    if (e.target.closest('[data-del-exp]') || e.target.closest('[data-edit-exp]') || e.target.closest('[data-export-exp]')) return;
     const id=el.dataset.exp; S.ui.expandedExps[id]=!S.ui.expandedExps[id];
     document.getElementById('tab-content').innerHTML=renderInventoryHTML(); bindTab();
   }));
@@ -1687,6 +1741,11 @@ function bindTab() {
     e.stopPropagation();
     const exp = S.data.experiments.find(x=>x.id===el.dataset.editExp);
     if (exp) modalEditExp(exp);
+  }));
+  document.querySelectorAll('[data-export-exp]').forEach(el=>el.addEventListener('click', e=>{
+    e.stopPropagation();
+    const exp = S.data.experiments.find(x=>x.id===el.dataset.exportExp);
+    if (exp) doExportExperiment(exp);
   }));
   document.querySelectorAll('[data-mouse]').forEach(el=>el.addEventListener('click',e=>{
     if (e.target.closest('[data-del-mouse]') || e.target.closest('[data-edit-mouse]')) return;
