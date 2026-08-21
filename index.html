@@ -209,7 +209,7 @@ const TAB = { PROJECTS:'projects', EXP:'experiments', MICE:'mice', TISSUES:'tiss
 const COLS = {
   PROJECTS:['id','name','description','color'],
   EXP:     ['id','projectId','name','description'],
-  MICE:    ['id','expId','mouseNum','breederNo','gender','weightG','takedownAge','depleted','legacy','notes','dob'],
+  MICE:    ['id','expId','mouseNum','breederNo','gender','weightG','takedownAge','depleted','legacy','notes','dob', 'takedownDate'],
   TISSUES: ['id','mouseId','organ','tissueDate','sectioningDate','notes'],
   SLIDES:  ['id','tissueId','batch','slideNum','status','usedBy','usedFor','stainType','antibody','protocolVer','dateUsed','notes'],
   LOG:     ['timestamp','slideId','action','user','tissueId','batch','slideNum','details'],
@@ -579,8 +579,10 @@ function renderInventoryHTML() {
 
   let expHTML = '';
   exps.forEach(exp => {
+    // const expMice = mice.filter(m=>m.expId===exp.id)
+    //   .sort((a,b) => (parseInt(a.mouseNum)||0) - (parseInt(b.mouseNum)||0));
     const expMice = mice.filter(m=>m.expId===exp.id)
-      .sort((a,b) => (parseInt(a.mouseNum)||0) - (parseInt(b.mouseNum)||0));
+      .sort((a,b) => a.mouseNum.localeCompare(b.mouseNum, undefined, {numeric:true, sensitivity:'base'}));
     const expTissueIds = new Set(expMice.flatMap(m=>mouseTissues(m.id).map(t=>t.id)));
     const expSlides = slides.filter(s=>expTissueIds.has(s.tissueId));
     if (status!=='all' && !expSlides.some(s=>s.status===status)) return;
@@ -1104,6 +1106,7 @@ function modalAddMouse() {
     </div>
     <div class="form-2col">
       <div class="form-row"><label>Date of birth <span class="optional-tag">optional</span></label><input id="m-dob" type="date"/></div>
+      <div class="form-row"><label>Takedown date <span class="optional-tag">optional</span></label><input id="m-takedown-date" type="date"/></div>
       <div class="form-row"><label>Takedown age <span class="optional-tag">optional</span></label><input id="m-age" placeholder="P14"/></div>
     </div>
     <div class="form-row"><label>Breeder no. <span class="optional-tag">optional</span></label><input id="m-breeder" placeholder="B123"/></div>
@@ -1126,9 +1129,10 @@ function modalEditMouse(mouse) {
       <div class="form-row"><label>Weight at takedown (g) <span class="optional-tag">optional</span></label><input id="m-weight" type="number" value="${mouse.weightG||''}" step="0.1"/></div>
     </div>
     <div class="form-2col">
-      <div class="form-row"><label>Date of birth <span class="optional-tag">optional</span></label><input id="m-dob" type="date" value="${mouse.dob||''}"/></div>
-      <div class="form-row"><label>Takedown age <span class="optional-tag">optional</span></label><input id="m-age" value="${mouse.takedownAge||''}" placeholder="P14"/></div>
-    </div>
+  <div class="form-row"><label>Date of birth <span class="optional-tag">optional</span></label><input id="m-dob" type="date" value="${mouse.dob||''}"/></div>
+  <div class="form-row"><label>Takedown age <span class="optional-tag">optional</span></label><input id="m-age" value="${mouse.takedownAge||''}" placeholder="P14"/></div>
+</div>
+<div class="form-row"><label>Takedown date <span class="optional-tag">optional</span></label><input id="m-takedown-date" type="date" value="${mouse.takedownDate||''}"/></div>
     <div class="form-row"><label>Breeder no. <span class="optional-tag">optional</span></label><input id="m-breeder" value="${mouse.breederNo||''}"/></div>
     <div class="form-row" style="display:flex;gap:20px">
       <label class="form-check"><input type="checkbox" id="m-depleted" ${mouse.depleted==='true'?'checked':''}> Depleted</label>
@@ -1545,6 +1549,7 @@ async function doAddMouse() {
     legacy:document.getElementById('m-legacy')?.checked?'true':'false',
     notes:document.getElementById('m-notes')?.value.trim(),
     dob:document.getElementById('m-dob')?.value||'',
+    takedownDate:document.getElementById('m-takedown-date')?.value||'',
   };
   S.data.mice.push(mouse);
   S.ui.expandedExps[expId]=true;
@@ -1560,6 +1565,7 @@ async function doEditMouse(mouseId) {
     weightG:document.getElementById('m-weight')?.value.trim(),
     dob:document.getElementById('m-dob')?.value||'',
     takedownAge:document.getElementById('m-age')?.value.trim(),
+    takedownDate:document.getElementById('m-takedown-date')?.value||'',
     breederNo:document.getElementById('m-breeder')?.value.trim(),
     depleted:document.getElementById('m-depleted')?.checked?'true':'false',
     legacy:document.getElementById('m-legacy')?.checked?'true':'false',
