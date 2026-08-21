@@ -660,7 +660,7 @@ function renderInventoryHTML() {
       });
 
       const meta = [mouse.gender, mouse.weightG?mouse.weightG+'g':'', mouse.takedownAge,
-        mouse.dob?'DOB:'+mouse.dob:'', mouse.breederNo?'Breeder:'+mouse.breederNo:''].filter(Boolean).join(' · ');
+        mouse.dob?'DOB:'+mouse.dob:'', mouse.takedownDate?'Takedown:'+mouse.takedownDate:'', mouse.breederNo?'Breeder:'+mouse.breederNo:''].filter(Boolean).join(' · ');
 
       const injections = mouseInjections(mouse.id);
       const injRowsHTML = injections.map(inj => `
