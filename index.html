@@ -574,7 +574,7 @@ function renderInventoryHTML() {
   const totalUsed      = slides.filter(s=>s.status==='used').length;
   const totalMissing   = slides.filter(s=>s.status==='missing').length;
   const totalDiscarded = slides.filter(s=>s.status==='discarded').length;
-  const organs = [...new Set(tissues.map(t=>t.organ))].filter(Boolean);
+  const organs = [...new Set(tissues.map(t=>t.organ))].filter(Boolean).sort((a,b)=>a.localeCompare(b));;
   const searchLower = search.toLowerCase();
 
   let exps = [...experiments].sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}));
@@ -603,6 +603,7 @@ function renderInventoryHTML() {
     expMice.forEach(mouse => {
       let mTissues = mouseTissues(mouse.id);
       if (organ!=='all') mTissues = mTissues.filter(t=>t.organ===organ);
+      mTissues = [...mTissues].sort((a,b)=>(a.organ||'').localeCompare(b.organ||''));
       const mSlidesAll = mTissues.flatMap(t=>tissueSlides(t.id));
       if (status!=='all' && !mSlidesAll.some(s=>s.status===status)) return;
       if (organ!=='all' && mTissues.length===0) return;
@@ -1072,7 +1073,7 @@ function modalSlide(sl) {
 
 // ── Experiment modal ──────────────────────────────────────────────────────
 function modalAddExp() {
-  const projectOpts = S.data.projects.map(p=>`<option value="${p.id}" ${p.id===S.currentProjectId?'selected':''}>${p.name}</option>`).join('');
+  const projectOpts = S.data.projects.sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${p.id}" ${p.id===S.currentProjectId?'selected':''}>${p.name}</option>`).join('');
   showModal(`<div class="modal"><h3>Add experiment</h3>
     ${S.data.projects.length === 0 ? `<div class="warn-box">No projects yet. Add a project first via the project switcher.</div>` : ''}
     <div class="form-row"><label>Project *</label>
@@ -1088,7 +1089,7 @@ function modalAddExp() {
 
 // ── Edit experiment modal ─────────────────────────────────────────────────
 function modalEditExp(exp) {
-  const projectOpts = S.data.projects.map(p=>`<option value="${p.id}" ${p.id===exp.projectId?'selected':''}>${p.name}</option>`).join('');
+  const projectOpts = S.data.projects.sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${p.id}" ${p.id===exp.projectId?'selected':''}>${p.name}</option>`).join('');
   showModal(`<div class="modal"><h3>Edit experiment</h3>
     <div class="form-row"><label>Project *</label>
       <select id="e-proj">${projectOpts || '<option value="">— no projects —</option>'}</select>
@@ -1222,8 +1223,7 @@ function modalAddBatch(presetTissueId) {
   if (!S.data.mice.length) { alert('Add a mouse first.'); return; }
   const presetTissue = presetTissueId ? S.data.tissues.find(t=>t.id===presetTissueId) : null;
   const presetMouse = presetTissue ? S.data.mice.find(m=>m.id===presetTissue.mouseId) : null;
-
-  const exps = projectExperiments();
+  const exps = [...projectExperiments()].sort((a,b)=>a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}));
   const expOpts = exps.map(e=>`<option value="${e.id}" ${presetMouse?.expId===e.id?'selected':''}>${e.id}${e.name?' — '+e.name:''}</option>`).join('');
 
   showModal(`<div class="modal"><h3>Add batch / slides</h3>
@@ -1255,7 +1255,8 @@ function modalAddBatch(presetTissueId) {
 
   function updateMiceList() {
     const expId = document.getElementById('b-exp')?.value;
-    const miceForExp = S.data.mice.filter(m => m.expId === expId);
+    const miceForExp = S.data.mice.filter(m => m.expId === expId)
+      .sort((a,b)=>a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}));
     const sel = document.getElementById('b-mouse');
     if (sel) sel.innerHTML = miceForExp.length
       ? miceForExp.map(m=>`<option value="${m.id}">${m.id}</option>`).join('')
@@ -1264,7 +1265,8 @@ function modalAddBatch(presetTissueId) {
   }
   function updateTissueList() {
     const mouseId = document.getElementById('b-mouse')?.value;
-    const tissuesForMouse = S.data.tissues.filter(t => t.mouseId === mouseId);
+    const tissuesForMouse = S.data.tissues.filter(t => t.mouseId === mouseId)
+      .sort((a,b)=>(a.organ||'').localeCompare(b.organ||''));
     const sel = document.getElementById('b-tissue');
     if (sel) sel.innerHTML =
       tissuesForMouse.map(t=>`<option value="${t.id}">${t.organ}${t.sectioningDate?' · '+t.sectioningDate:''}</option>`).join('')
@@ -1361,7 +1363,7 @@ function modalInjection(mouseId, existing) {
 
 // ── Project modal ─────────────────────────────────────────────────────────
 function modalProjects() {
-  const proj = S.data.projects;
+  const proj = S.data.projects.sort((a,b)=>a.name.localeCompare(b.name));
   const listHTML = proj.map((p,i) => `
     <div class="project-item ${p.id===S.currentProjectId?'active':''}" data-pick-proj="${p.id}">
       <div>
