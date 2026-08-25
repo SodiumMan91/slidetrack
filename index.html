@@ -796,16 +796,36 @@ function renderLookupHTML() {
   const antibodies = [...new Set(all.map(s => s.antibody).filter(Boolean))].sort();
 
   const { stainType, antibody } = S.lookup;
-  let results = all;
-  if (stainType !== 'all') results = results.filter(s => s.stainType === stainType);
-  if (antibody !== 'all') results = results.filter(s => s.antibody === antibody);
+let results = all;
+if (stainType !== 'all') results = results.filter(s => s.stainType === stainType);
+if (antibody !== 'all') results = results.filter(s => s.antibody === antibody);
 
-  // newest first
-  results = [...results].sort((a,b) => (b.dateUsed||'').localeCompare(a.dateUsed||''));
+const tissueByIdMap = Object.fromEntries(S.data.tissues.map(t => [t.id, t]));
+const mouseById = Object.fromEntries(S.data.mice.map(m => [m.id, m]));
+const expById = Object.fromEntries(S.data.experiments.map(e => [e.id, e]));
 
-  const tissueByIdMap = Object.fromEntries(S.data.tissues.map(t => [t.id, t]));
-  const mouseById = Object.fromEntries(S.data.mice.map(m => [m.id, m]));
-  const expById = Object.fromEntries(S.data.experiments.map(e => [e.id, e]));
+// Sort: mouse > organ > stain type > antibody/probe > protocol > date
+results = [...results].sort((a,b) => {
+  const ta = tissueByIdMap[a.tissueId], tb = tissueByIdMap[b.tissueId];
+  const ma = ta ? mouseById[ta.mouseId] : null, mb = tb ? mouseById[tb.mouseId] : null;
+
+  const mouseCmp = (ma?.id||'').localeCompare(mb?.id||'', undefined, {numeric:true, sensitivity:'base'});
+  if (mouseCmp) return mouseCmp;
+
+  const organCmp = (ta?.organ||'').localeCompare(tb?.organ||'');
+  if (organCmp) return organCmp;
+
+  const stainCmp = (a.stainType||'').localeCompare(b.stainType||'');
+  if (stainCmp) return stainCmp;
+
+  const antibodyCmp = (a.antibody||'').localeCompare(b.antibody||'');
+  if (antibodyCmp) return antibodyCmp;
+
+  const protoCmp = (a.protocolVer||'').localeCompare(b.protocolVer||'');
+  if (protoCmp) return protoCmp;
+
+  return (a.dateUsed||'').localeCompare(b.dateUsed||'');
+});
 
   const rowsHTML = results.map(sl => {
     const tissue = tissueByIdMap[sl.tissueId];
