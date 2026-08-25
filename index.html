@@ -1658,7 +1658,7 @@ async function doUse(sl) {
   const antibody=document.getElementById('a-antibody')?.value||sl.antibody;
   const protocolVer=document.getElementById('a-protocol')?.value||sl.protocolVer;
   const usedFor=document.getElementById('a-notes')?.value||sl.usedFor;
-  const dateUsed=document.getElementById('a-date')?.value||today();
+  const dateUsed=document.getElementById('a-date')?.value||'';
   Object.assign(sl,{status:'used',usedBy:user,stainType,antibody,protocolVer,usedFor,dateUsed});
   const log=makeLog(sl,'used',user,[stainType,antibody,protocolVer,usedFor]);
   S.data.usageLog.push(log);
