@@ -1405,15 +1405,17 @@ function modalTissueBatch(presetMouseId) {
 
   function pickerHTML() {
     const exps = [...projectExperiments()].sort((a,b)=>a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}));
+    const expPlaceholder = `<option value="" ${!mstate.expId?'selected':''} disabled>Select Experiment</option>`;
     const expOpts = exps.map(e=>`<option value="${e.id}" ${mstate.expId===e.id?'selected':''}>${e.id}${e.name?' — '+e.name:''}</option>`).join('');
     const miceForExp = mstate.expId ? S.data.mice.filter(m=>m.expId===mstate.expId).sort((a,b)=>a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'})) : [];
+    const mousePlaceholder = `<option value="" ${!mstate.mouseId?'selected':''} disabled>Select Mouse</option>`;
     const mouseOpts = miceForExp.map(m=>`<option value="${m.id}" ${mstate.mouseId===m.id?'selected':''}>${m.id}</option>`).join('');
     return `
       <div class="form-row"><label>Experiment *</label>
-        <select id="tb-exp">${expOpts || '<option value="">— no experiments —</option>'}</select>
+        <select id="tb-exp">${exps.length ? expPlaceholder + expOpts : '<option value="">— no experiments —</option>'}</select>
       </div>
       <div class="form-row"><label>Mouse *</label>
-        <select id="tb-mouse">${mstate.expId ? (mouseOpts || '<option value="">— no mice in this experiment —</option>') : '<option value="">— select experiment first —</option>'}</select>
+        <select id="tb-mouse">${mstate.expId ? (miceForExp.length ? mousePlaceholder + mouseOpts : '<option value="">— no mice in this experiment —</option>') : '<option value="">— select experiment first —</option>'}</select>
       </div>`;
   }
 
