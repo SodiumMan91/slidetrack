@@ -2004,7 +2004,22 @@ function bindTab() {
     e.stopPropagation();
     doDeleteInjection(el.dataset.delInj);
   }));
-  const refilter=()=>{ document.getElementById('tab-content').innerHTML=renderInventoryHTML(); bindTab(); };
+  const refilter=()=>{
+    const el = document.getElementById('flt-search');
+    const hadFocus = document.activeElement === el;
+    const cursorPos = el ? el.selectionStart : null;
+  
+    document.getElementById('tab-content').innerHTML=renderInventoryHTML();
+    bindTab();
+  
+    if (hadFocus) {
+      const newEl = document.getElementById('flt-search');
+      if (newEl) {
+        newEl.focus();
+        newEl.setSelectionRange(cursorPos, cursorPos);
+      }
+    }
+  };
   document.getElementById('flt-search')?.addEventListener('input',e=>{ S.filter.search=e.target.value; refilter(); });
   document.getElementById('flt-organ')?.addEventListener('change',e=>{ S.filter.organ=e.target.value; refilter(); });
   document.getElementById('flt-status')?.addEventListener('change',e=>{ S.filter.status=e.target.value; refilter(); });
