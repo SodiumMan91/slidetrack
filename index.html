@@ -635,16 +635,16 @@ function renderInventoryHTML() {
               :'slide-used';
             const tip = sl.status==='free'?'Free — click to use or reserve'
               :sl.status==='reserved'?`Reserved: ${sl.usedBy||'?'} · ${sl.antibody||sl.usedFor||''}`
-              :sl.status==='missing'?`Missing — last seen: ${sl.dateUsed||'?'}`
+              :sl.status==='missing'?`Missing — last seen: ${fmtDate(sl.dateUsed)||'?'}`
               :sl.status==='discarded'?`Discarded: ${sl.notes||''}`
-              :`Used: ${sl.usedBy||'?'} · ${sl.antibody||''} ${sl.dateUsed||''}`;
+              :`Used: ${sl.usedBy||'?'} · ${sl.antibody||''} ${fmtDate(sl.dateUsed)||''}`;
             const label = sl.status==='missing'?'?':sl.status==='discarded'?'✕':sl.slideNum;
             return `<button class="slide-btn ${cls}" data-slide="${sl.id}" title="${tip}">${label}</button>`;
           }).join('');
           batchHTML += `<div class="batch-block"><div class="batch-label">${lbl}</div><div class="slides-row">${btns}</div></div>`;
         });
 
-        const tMeta = [tissue.sectioningDate?'Sectioning:'+tissue.sectioningDate:''].filter(Boolean).join(' · ');
+        const tMeta = [tissue.sectioningDate?'Sectioning:'+fmtDate(tissue.sectioningDate):''].filter(Boolean).join(' · ');
 
         tissueHTML += `<div class="tissue-block">
           <div class="tissue-header" data-tissue="${tissue.id}">
@@ -669,7 +669,7 @@ function renderInventoryHTML() {
       });
 
       const meta = [mouse.gender, mouse.weightG?mouse.weightG+'g':'', mouse.takedownAge,
-        mouse.dob?'DOB:'+mouse.dob:'', mouse.takedownDate?'Takedown:'+mouse.takedownDate:'', mouse.breederNo?'Breeder:'+mouse.breederNo:''].filter(Boolean).join(' · ');
+        mouse.dob?'DOB:'+fmtDate(mouse.dob):'', mouse.takedownDate?'Takedown:'+fmtDate(mouse.takedownDate):'', mouse.breederNo?'Breeder:'+mouse.breederNo:''].filter(Boolean).join(' · ');
 
       const injections = mouseInjections(mouse.id);
       const injRowsHTML = injections.map(inj => `
@@ -841,7 +841,7 @@ results = [...results].sort((a,b) => {
       <td>${sl.antibody || '—'}</td>
       <td>${sl.protocolVer || '—'}</td>
       <td><span class="pill pill-${sl.status}">${sl.status}</span></td>
-      <td>${sl.dateUsed || '—'}</td>
+      <td>${fmtDate(sl.dateUsed) || '—'}</td>
       <td>${sl.usedBy || '—'}</td>
       <td>${sl.usedFor || sl.notes || ''}</td>
     </tr>`;
@@ -1006,7 +1006,7 @@ function modalSlide(sl) {
     sl.antibody?['Antibody/Probe',sl.antibody]:null,
     sl.protocolVer?['Protocol ver.',sl.protocolVer]:null,
     sl.usedFor?['Purpose',sl.usedFor]:null,
-    sl.dateUsed?['Date',sl.dateUsed]:null,
+    sl.dateUsed?['Date',fmtDate(sl.dateUsed)]:null,
     sl.notes?['Notes',sl.notes]:null,
   ].filter(Boolean).map(([l,v])=>`<div class="detail-row"><span class="detail-lbl">${l}</span><span>${v}</span></div>`).join('');
 
@@ -1483,6 +1483,13 @@ function modalEditProject(proj) {
 const today = () => new Date().toISOString().split('T')[0];
 const uid   = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 
+function fmtDate(d) {
+  if (!d) return d;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+  if (!m) return d; // not a plain ISO date string, leave as-is
+  return `${m[2]}/${m[3]}/${m[1]}`;
+}
+  
 async function persist(fn) {
   S.saving=true; render();
   try { await fn(); } catch(e) { S.error='Sheet sync error: '+e.message; }
