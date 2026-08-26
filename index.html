@@ -166,7 +166,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .empty{text-align:center;padding:3rem;color:var(--text3);font-size:14px}
 .pin-field{text-align:center;font-size:22px;letter-spacing:8px;font-family:var(--mono)}
 .divider{height:1px;background:var(--border);margin:1rem 0}
-.saving{font-size:12px;color:var(--text3)}
+.save-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:flex;align-items:center;justify-content:center}
+.save-box{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-lg);padding:1.1rem 1.6rem;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.save-box .spinner{width:18px;height:18px;flex-shrink:0}
 /* Project selector modal */
 .project-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem}
 .project-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:var(--radius);border:1.5px solid var(--border);cursor:pointer;transition:border-color .12s}
@@ -505,6 +507,7 @@ function render() {
   const projColor = proj?.color || 'var(--accent)';
 
   document.getElementById('app').innerHTML = `
+    ${S.saving ? `<div class="save-overlay"><div class="save-box"><div class="spinner"></div>Saving…</div></div>` : ''}
     <div class="topbar">
       <div style="display:flex;align-items:center;gap:10px">
         <div class="logo">SlideTrack</div>
@@ -515,7 +518,6 @@ function render() {
         </div>
       </div>
       <div class="topbar-r">
-        ${S.saving ? `<span class="saving">Saving…</span>` : ''}
         ${S.user ? `<div class="user-chip">${S.user.picture?`<img src="${S.user.picture}">`:''}${S.user.name||S.user.email}</div>` : ''}
         <button class="btn btn-sm" id="btn-refresh">${SVG.refresh} Refresh</button>
         ${S.isAdmin ? `<span class="btn btn-sm" style="cursor:default" title="Admin rights come from the users sheet — ask whoever manages it to change this">${SVG.unlock} Admin</span>` : ''}
