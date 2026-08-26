@@ -1361,6 +1361,155 @@ async function doAddBatch(presetTissueId) {
   });
 }
 
+// ── Unified tissue/batch checklist modal ──────────────────────────────────
+const DEFAULT_ORGANS = ['SI','Liver','Col','GF'];
+
+function buildTissueBatchRows(mouseId) {
+  const existing = S.data.tissues.filter(t=>t.mouseId===mouseId)
+    .sort((a,b)=>(a.organ||'').localeCompare(b.organ||''));
+  const rows = existing.map(t => ({
+    organ: t.organ, tissueId: t.id, isNew: false, checked: false,
+    batch: '', count: '', sectioningDate: t.sectioningDate || '',
+  }));
+  const existingOrgans = new Set(existing.map(t=>t.organ));
+  DEFAULT_ORGANS.forEach(o => {
+    if (!existingOrgans.has(o)) {
+      rows.push({ organ: o, tissueId: null, isNew: true, checked: false, batch:'', count:'', sectioningDate:'' });
+    }
+  });
+  return rows;
+}
+
+function modalTissueBatch(presetMouseId) {
+  const mstate = { mouseId: presetMouseId || null, expId: null, rows: [] };
+  if (mstate.mouseId) {
+    const mouse = S.data.mice.find(m=>m.id===mstate.mouseId);
+    mstate.expId = mouse ? mouse.expId : null;
+    mstate.rows = buildTissueBatchRows(mstate.mouseId);
+  }
+
+  function rowsHTML() {
+    if (!mstate.mouseId) return '';
+    if (!mstate.rows.length) return '<div style="font-size:12px;color:var(--text3);margin-top:.5rem">No organs to show.</div>';
+    return `<div style="margin-top:.75rem">${mstate.rows.map((r,i) => `
+      <div style="display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid var(--border);padding:7px 0">
+        <input type="checkbox" class="tb-check" data-idx="${i}" ${r.checked?'checked':''} style="margin-top:4px"/>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${r.organ} <span style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.3px">${r.isNew?'new':'existing'}</span></div>
+          ${r.isNew?`<input type="date" class="tb-date" data-idx="${i}" value="${r.sectioningDate}" style="margin-top:4px;font-size:12px;padding:4px 6px;width:100%;border-radius:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text)"/>`:''}
+        </div>
+        <input type="number" class="tb-batch" data-idx="${i}" placeholder="Batch#" value="${r.batch}" min="1" style="width:64px;font-size:12px;padding:5px 6px;border-radius:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text)"/>
+        <input type="number" class="tb-count" data-idx="${i}" placeholder="# slides" value="${r.count}" min="0" style="width:68px;font-size:12px;padding:5px 6px;border-radius:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text)"/>
+      </div>`).join('')}</div>`;
+  }
+
+  function pickerHTML() {
+    const exps = [...projectExperiments()].sort((a,b)=>a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}));
+    const expOpts = exps.map(e=>`<option value="${e.id}" ${mstate.expId===e.id?'selected':''}>${e.id}${e.name?' — '+e.name:''}</option>`).join('');
+    const miceForExp = mstate.expId ? S.data.mice.filter(m=>m.expId===mstate.expId).sort((a,b)=>a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'})) : [];
+    const mouseOpts = miceForExp.map(m=>`<option value="${m.id}" ${mstate.mouseId===m.id?'selected':''}>${m.id}</option>`).join('');
+    return `
+      <div class="form-row"><label>Experiment *</label>
+        <select id="tb-exp">${expOpts || '<option value="">— no experiments —</option>'}</select>
+      </div>
+      <div class="form-row"><label>Mouse *</label>
+        <select id="tb-mouse">${mstate.expId ? (mouseOpts || '<option value="">— no mice in this experiment —</option>') : '<option value="">— select experiment first —</option>'}</select>
+      </div>`;
+  }
+
+  function draw() {
+    const needsPicker = !presetMouseId;
+    showModal(`<div class="modal">
+      <h3>Add tissue / organ</h3>
+      ${needsPicker ? pickerHTML() : `<div class="slide-ref">${mstate.mouseId}</div>`}
+      <div id="tb-rows">${rowsHTML()}</div>
+      ${mstate.mouseId ? `
+      <div style="display:flex;gap:8px;margin-top:.85rem">
+        <input id="tb-new-organ" placeholder="Other organ…" style="flex:1;font-size:13px;padding:7px 9px;border-radius:8px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text)"/>
+        <button class="btn btn-sm" id="tb-add-organ">${SVG.plus} Add</button>
+      </div>` : ''}
+      <div class="modal-btns">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" id="tb-save">Add selected</button>
+      </div>
+    </div>`);
+
+    if (needsPicker) {
+      document.getElementById('tb-exp')?.addEventListener('change', e => {
+        mstate.expId = e.target.value || null;
+        mstate.mouseId = null; mstate.rows = [];
+        draw();
+      });
+      document.getElementById('tb-mouse')?.addEventListener('change', e => {
+        mstate.mouseId = e.target.value || null;
+        mstate.rows = mstate.mouseId ? buildTissueBatchRows(mstate.mouseId) : [];
+        draw();
+      });
+    }
+
+    document.querySelectorAll('.tb-check').forEach(el=>el.addEventListener('change', e=>{ mstate.rows[+el.dataset.idx].checked = e.target.checked; }));
+    document.querySelectorAll('.tb-batch').forEach(el=>el.addEventListener('input', e=>{ mstate.rows[+el.dataset.idx].batch = e.target.value; }));
+    document.querySelectorAll('.tb-count').forEach(el=>el.addEventListener('input', e=>{ mstate.rows[+el.dataset.idx].count = e.target.value; }));
+    document.querySelectorAll('.tb-date').forEach(el=>el.addEventListener('input', e=>{ mstate.rows[+el.dataset.idx].sectioningDate = e.target.value; }));
+    document.getElementById('tb-add-organ')?.addEventListener('click', () => {
+      const input = document.getElementById('tb-new-organ');
+      const val = input?.value.trim();
+      if (!val) return;
+      if (mstate.rows.some(r=>r.organ.toLowerCase()===val.toLowerCase())) { alert('That organ is already in the list.'); return; }
+      mstate.rows.push({ organ: val, tissueId: null, isNew: true, checked: true, batch:'', count:'', sectioningDate:'' });
+      draw();
+    });
+    document.getElementById('tb-save')?.addEventListener('click', () => doSaveTissueBatch(mstate));
+  }
+
+  draw();
+}
+
+async function doSaveTissueBatch(mstate) {
+  if (!mstate.mouseId) { alert('Select a mouse'); return; }
+  const checked = mstate.rows.filter(r => r.checked);
+  if (!checked.length) { alert('Select at least one organ'); return; }
+
+  const newTissues = [];
+  const newSlidesForSheet = [];
+
+  for (const r of checked) {
+    let tissueId = r.tissueId;
+    if (r.isNew) {
+      tissueId = uniqueTissueId(mstate.mouseId, r.organ);
+      const tissue = { id: tissueId, mouseId: mstate.mouseId, organ: r.organ, sectioningDate: r.sectioningDate || '', notes: '' };
+      newTissues.push(tissue);
+      S.data.tissues.push(tissue);
+    }
+    const count = parseInt(r.count) || 0;
+    if (count > 0) {
+      const batchRaw = (r.batch || '').toString().trim();
+      const batch = batchRaw === '' ? null : parseInt(batchRaw);
+      const existingSlides = S.data.slides.filter(s => s.tissueId === tissueId && s.batch === batch);
+      const startNum = existingSlides.length + 1;
+      for (let i = 0; i < count; i++) {
+        const slideNum = startNum + i;
+        const newId = uid();
+        newSlidesForSheet.push({ id: newId, tissueId, batch: batch===null?'':String(batch), slideNum: String(slideNum),
+          status:'free', usedBy:'', usedFor:'', stainType:'', antibody:'', protocolVer:'', dateUsed:'', notes:'' });
+        S.data.slides.push({ id: newId, tissueId, batch, slideNum,
+          status:'free', usedBy:'', usedFor:'', stainType:'', antibody:'', protocolVer:'', dateUsed:'', notes:'' });
+      }
+    }
+    S.ui.expandedTissues[tissueId] = true;
+  }
+
+  const mouse = S.data.mice.find(m => m.id === mstate.mouseId);
+  if (mouse) { S.ui.expandedExps[mouse.expId] = true; S.ui.expandedMice[mouse.id] = true; }
+
+  closeModal(); render();
+  await persist(async () => {
+    for (const t of newTissues) await appendRow(TAB.TISSUES, objToRow(COLS.TISSUES, t));
+    for (const sl of newSlidesForSheet) await appendRow(TAB.SLIDES, objToRow(COLS.SLIDES, sl));
+    S.data = await loadAllData(); render();
+  });
+}
+
 // ── Injection modal (add / edit) ──────────────────────────────────────────
 function modalInjection(mouseId, existing) {
   const isEdit = !!existing;
@@ -1829,7 +1978,7 @@ function bindTab() {
   }));
   document.querySelectorAll('[data-add-tissue]').forEach(el=>el.addEventListener('click', e=>{
     e.stopPropagation();
-    modalAddTissue(el.dataset.addTissue, null);
+    modalTissueBatch(el.dataset.addTissue);
   }));
   document.querySelectorAll('[data-add-batch-tissue]').forEach(el=>el.addEventListener('click', e=>{
     e.stopPropagation();
@@ -1859,7 +2008,7 @@ function bindTab() {
   document.getElementById('flt-status')?.addEventListener('change',e=>{ S.filter.status=e.target.value; refilter(); });
   document.getElementById('btn-add-exp')?.addEventListener('click', modalAddExp);
   document.getElementById('btn-add-mouse')?.addEventListener('click', modalAddMouse);
-  document.getElementById('btn-add-batch')?.addEventListener('click', ()=>modalAddBatch());
+  document.getElementById('btn-add-batch')?.addEventListener('click', ()=>modalTissueBatch());
 
   // Lookup tab
   const relookup=()=>{ document.getElementById('tab-content').innerHTML=renderLookupHTML(); bindTab(); };
