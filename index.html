@@ -674,7 +674,7 @@ function renderInventoryHTML() {
       const injections = mouseInjections(mouse.id);
       const injRowsHTML = injections.map(inj => `
         <tr>
-          <td>${inj.date||'—'}</td>
+          <td>${fmtDate(inj.date)||'—'}</td>
           <td>${inj.substance||'—'}</td>
           <td>${inj.weightBeforeG?inj.weightBeforeG+'g':'—'}</td>
           <td>${inj.notes||''}</td>
