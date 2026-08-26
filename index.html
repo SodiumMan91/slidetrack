@@ -211,7 +211,7 @@ const TAB = { PROJECTS:'projects', EXP:'experiments', MICE:'mice', TISSUES:'tiss
 const COLS = {
   PROJECTS:['id','name','description','color'],
   EXP:     ['id','projectId','name','description'],
-  MICE:    ['id','expId','mouseNum','breederNo','gender','weightG','takedownAge','depleted','legacy','notes','dob','takedownDate'],
+  MICE:    ['id','expId','mouseNum','breederNo','gender','weightG','takedownAge','depleted','legacy','notes','dob','takedownDate','genotype'],
   TISSUES: ['id','mouseId','organ','sectioningDate','notes'],
   SLIDES:  ['id','tissueId','batch','slideNum','status','usedBy','usedFor','stainType','antibody','protocolVer','dateUsed','notes'],
   LOG:     ['timestamp','slideId','action','user','tissueId','batch','slideNum','details'],
@@ -670,7 +670,7 @@ function renderInventoryHTML() {
         </div>`;
       });
 
-      const meta = [mouse.gender, mouse.weightG?mouse.weightG+'g':'', mouse.takedownAge,
+      const meta = [mouse.gender, mouse.genotype, mouse.weightG?mouse.weightG+'g':'', mouse.takedownAge,
         mouse.dob?'DOB:'+fmtDate(mouse.dob):'', mouse.takedownDate?'Takedown:'+fmtDate(mouse.takedownDate):'', mouse.breederNo?'Breeder:'+mouse.breederNo:''].filter(Boolean).join(' · ');
 
       const injections = mouseInjections(mouse.id);
@@ -933,8 +933,8 @@ function doExportExperiment(exp) {
   sections.push([]);
 
   sections.push(['MICE']);
-  sections.push(['id','mouseNum','breederNo','gender','weightG','takedownAge','depleted','legacy','dob','notes']);
-  mice.forEach(m => sections.push([m.id,m.mouseNum,m.breederNo,m.gender,m.weightG,m.takedownAge,m.depleted,m.legacy,m.dob,m.notes]));
+  sections.push(['id','mouseNum','breederNo','gender','genotype','weightG','takedownAge','depleted','legacy','dob','notes']);
+  mice.forEach(m => sections.push([m.id,m.mouseNum,m.breederNo,m.gender,m.genotype,m.weightG,m.takedownAge,m.depleted,m.legacy,m.dob,m.notes]));
   sections.push([]);
 
   sections.push(['TISSUES']);
@@ -985,6 +985,11 @@ function organDatalist() {
   const seen = S.data.tissues.map(t=>t.organ).filter(Boolean);
   const all = [...new Set([...defaults, ...seen])].sort();
   return `<datalist id="organ-list">${all.map(o=>`<option value="${o}">`).join('')}</datalist>`;
+}
+function genotypeDatalist() {
+  const seen = S.data.mice.map(m=>m.genotype).filter(Boolean);
+  const all = [...new Set(seen)].sort();
+  return `<datalist id="genotype-list">${all.map(g=>`<option value="${g}">`).join('')}</datalist>`;
 }
 
 function showModal(html) {
@@ -1132,6 +1137,7 @@ function modalAddMouse() {
     .sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}))
     .map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('');
   showModal(`<div class="modal"><h3>Add mouse</h3>
+    ${genotypeDatalist()}
     <div class="info-box">ID will be generated as <strong>ExpID#N</strong>, e.g. <strong>Exp39#2</strong>. Add tissues/organs for this mouse afterward (or right when you add a batch of slides).</div>
     <div class="form-row"><label>Experiment *</label>
       <select id="m-exp">${expOpts}</select>
@@ -1139,14 +1145,17 @@ function modalAddMouse() {
     <div class="form-row"><label>Mouse # *</label><input id="m-num" type="text" placeholder="1 or 2b"/></div>
     <div class="form-2col">
       <div class="form-row"><label>Gender <span class="optional-tag">optional</span></label><select id="m-gender"><option value="">—</option><option>M</option><option>F</option></select></div>
+      <div class="form-row"><label>Genotype <span class="optional-tag">optional</span></label><input id="m-genotype" list="genotype-list" placeholder="e.g. WT, Villin-Cre;Apc fl/fl"/></div>
+    </div>
+    <div class="form-2col">
       <div class="form-row"><label>Weight at takedown (g) <span class="optional-tag">optional</span></label><input id="m-weight" type="number" placeholder="25.3" step="0.1"/></div>
+      <div class="form-row"><label>Breeder no. <span class="optional-tag">optional</span></label><input id="m-breeder" placeholder="B123"/></div>
     </div>
     <div class="form-2col">
       <div class="form-row"><label>Date of birth <span class="optional-tag">optional</span></label><input id="m-dob" type="date"/></div>
       <div class="form-row"><label>Takedown date <span class="optional-tag">optional</span></label><input id="m-takedown-date" type="date"/></div>
       <div class="form-row"><label>Takedown age <span class="optional-tag">optional</span></label><input id="m-age" placeholder="P14"/></div>
     </div>
-    <div class="form-row"><label>Breeder no. <span class="optional-tag">optional</span></label><input id="m-breeder" placeholder="B123"/></div>
     <div class="form-row" style="display:flex;gap:20px">
       <label class="form-check"><input type="checkbox" id="m-depleted"> Depleted</label>
       <label class="form-check"><input type="checkbox" id="m-legacy"> Legacy</label>
@@ -1160,17 +1169,21 @@ function modalAddMouse() {
 // ── Edit mouse modal ──────────────────────────────────────────────────────
 function modalEditMouse(mouse) {
   showModal(`<div class="modal"><h3>Edit mouse</h3>
+    ${genotypeDatalist()}
     <div class="form-row"><label>Mouse ID</label><input value="${mouse.id}" disabled style="opacity:.6"/></div>
     <div class="form-2col">
       <div class="form-row"><label>Gender <span class="optional-tag">optional</span></label><select id="m-gender"><option value="">—</option><option ${mouse.gender==='M'?'selected':''}>M</option><option ${mouse.gender==='F'?'selected':''}>F</option></select></div>
+      <div class="form-row"><label>Genotype <span class="optional-tag">optional</span></label><input id="m-genotype" list="genotype-list" value="${mouse.genotype||''}"/></div>
+    </div>
+    <div class="form-2col">
       <div class="form-row"><label>Weight at takedown (g) <span class="optional-tag">optional</span></label><input id="m-weight" type="number" value="${mouse.weightG||''}" step="0.1"/></div>
+      <div class="form-row"><label>Breeder no. <span class="optional-tag">optional</span></label><input id="m-breeder" value="${mouse.breederNo||''}"/></div>
     </div>
     <div class="form-2col">
   <div class="form-row"><label>Date of birth <span class="optional-tag">optional</span></label><input id="m-dob" type="date" value="${mouse.dob||''}"/></div>
   <div class="form-row"><label>Takedown age <span class="optional-tag">optional</span></label><input id="m-age" value="${mouse.takedownAge||''}" placeholder="P14"/></div>
 </div>
 <div class="form-row"><label>Takedown date <span class="optional-tag">optional</span></label><input id="m-takedown-date" type="date" value="${mouse.takedownDate||''}"/></div>
-    <div class="form-row"><label>Breeder no. <span class="optional-tag">optional</span></label><input id="m-breeder" value="${mouse.breederNo||''}"/></div>
     <div class="form-row" style="display:flex;gap:20px">
       <label class="form-check"><input type="checkbox" id="m-depleted" ${mouse.depleted==='true'?'checked':''}> Depleted</label>
       <label class="form-check"><input type="checkbox" id="m-legacy" ${mouse.legacy==='true'?'checked':''}> Legacy</label>
@@ -1737,6 +1750,7 @@ async function doAddMouse() {
     id:mouseId, expId, mouseNum:num,
     breederNo:document.getElementById('m-breeder')?.value.trim(),
     gender:document.getElementById('m-gender')?.value,
+    genotype:document.getElementById('m-genotype')?.value.trim(),
     weightG:document.getElementById('m-weight')?.value.trim(),
     takedownAge:document.getElementById('m-age')?.value.trim(),
     depleted:document.getElementById('m-depleted')?.checked?'true':'false',
@@ -1756,6 +1770,7 @@ async function doEditMouse(mouseId) {
   if (!mouse) return;
   Object.assign(mouse, {
     gender:document.getElementById('m-gender')?.value,
+    genotype:document.getElementById('m-genotype')?.value.trim(),
     weightG:document.getElementById('m-weight')?.value.trim(),
     dob:document.getElementById('m-dob')?.value||'',
     takedownAge:document.getElementById('m-age')?.value.trim(),
