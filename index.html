@@ -579,7 +579,7 @@ function renderInventoryHTML() {
   const organs = [...new Set(tissues.map(t=>t.organ))].filter(Boolean).sort((a,b)=>a.localeCompare(b));;
   const searchLower = search.toLowerCase();
 
-  let exps = [...experiments].sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}));
+  let exps = [...experiments].sort((a,b) => b.id.localeCompare(a.id, undefined, {numeric:true, sensitivity:'base'}));
   if (search) exps = exps.filter(e =>
     e.id.toLowerCase().includes(searchLower) ||
     (e.name||'').toLowerCase().includes(searchLower) ||
