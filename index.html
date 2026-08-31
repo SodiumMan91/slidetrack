@@ -1134,7 +1134,7 @@ function modalAddMouse() {
   if (!S.data.experiments.length) { alert('Add an experiment first.'); return; }
   // const expOpts = projectExperiments().map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('');
   const expOpts = [...projectExperiments()]
-    .sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}))
+    .sort((a,b) => b.id.localeCompare(a.id, undefined, {numeric:true, sensitivity:'base'}))
     .map(e=>`<option value="${e.id}">${e.id}${e.name?' — '+e.name:''}</option>`).join('');
   showModal(`<div class="modal"><h3>Add mouse</h3>
     ${genotypeDatalist()}
@@ -1258,7 +1258,7 @@ function modalAddBatch(presetTissueId) {
   if (!S.data.mice.length) { alert('Add a mouse first.'); return; }
   const presetTissue = presetTissueId ? S.data.tissues.find(t=>t.id===presetTissueId) : null;
   const presetMouse = presetTissue ? S.data.mice.find(m=>m.id===presetTissue.mouseId) : null;
-  const exps = [...projectExperiments()].sort((a,b)=>a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}));
+  const exps = [...projectExperiments()].sort((a,b)=>b.id.localeCompare(a.id, undefined, {numeric:true, sensitivity:'base'}));
   const expOpts = exps.map(e=>`<option value="${e.id}" ${presetMouse?.expId===e.id?'selected':''}>${e.id}${e.name?' — '+e.name:''}</option>`).join('');
 
   showModal(`<div class="modal"><h3>Add batch / slides</h3>
@@ -1417,7 +1417,7 @@ function modalTissueBatch(presetMouseId) {
   }
 
   function pickerHTML() {
-    const exps = [...projectExperiments()].sort((a,b)=>a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'}));
+    const exps = [...projectExperiments()].sort((a,b)=>b.id.localeCompare(a.id, undefined, {numeric:true, sensitivity:'base'}));
     const expPlaceholder = `<option value="" ${!mstate.expId?'selected':''} disabled>Select Experiment</option>`;
     const expOpts = exps.map(e=>`<option value="${e.id}" ${mstate.expId===e.id?'selected':''}>${e.id}${e.name?' — '+e.name:''}</option>`).join('');
     const miceForExp = mstate.expId ? S.data.mice.filter(m=>m.expId===mstate.expId).sort((a,b)=>a.id.localeCompare(b.id, undefined, {numeric:true, sensitivity:'base'})) : [];
