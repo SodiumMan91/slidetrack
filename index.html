@@ -976,9 +976,32 @@ function antibodyDatalist() {
   const antibodies = [...new Set(S.data.slides.map(s=>s.antibody).filter(Boolean))].sort();
   return `<datalist id="antibody-list">${antibodies.map(a=>`<option value="${a}">`).join('')}</datalist>`;
 }
-function substanceDatalist() {
-  const substances = [...new Set(S.data.injections.map(i=>i.substance).filter(Boolean))].sort();
+function expInjectionsForMouse(mouseId) {
+  const mouse = S.data.mice.find(m => m.id === mouseId);
+  if (!mouse) return [];
+  const miceInExp = new Set(S.data.mice.filter(m => m.expId === mouse.expId).map(m => m.id));
+  return S.data.injections.filter(i => miceInExp.has(i.mouseId));
+}
+
+function substanceDatalist(mouseId) {
+  const injs = mouseId ? expInjectionsForMouse(mouseId) : S.data.injections;
+  const substances = [...new Set(injs.map(i=>i.substance).filter(Boolean))].sort();
   return `<datalist id="substance-list">${substances.map(a=>`<option value="${a}">`).join('')}</datalist>`;
+}
+function autofillInjectionFromExp(mouseId, existing) {
+  const input = document.getElementById('i-substance');
+  const val = input?.value.trim();
+  if (!val) return;
+  const candidates = expInjectionsForMouse(mouseId)
+    .filter(i => i.substance === val && (!existing || i.id !== existing.id)); // exclude self when editing
+  if (!candidates.length) return;
+  const latest = candidates.sort((a,b) => (b.date||'').localeCompare(a.date||''))[0]; // most recent wins on clash
+  const dateEl = document.getElementById('i-date');
+  const weightEl = document.getElementById('i-weight');
+  const notesEl = document.getElementById('i-notes');
+  if (dateEl && latest.date) dateEl.value = latest.date;
+  if (weightEl) weightEl.value = latest.weightBeforeG || '';
+  if (notesEl) notesEl.value = latest.notes || '';
 }
 function organDatalist() {
   const defaults = ['SI','Liver','Col','GF'];
@@ -1545,6 +1568,7 @@ function modalInjection(mouseId, existing) {
   </div>`);
   document.getElementById('btn-save-injection').addEventListener('click', ()=>doSaveInjection(mouseId, existing));
   document.getElementById('btn-del-injection')?.addEventListener('click', ()=>doDeleteInjection(existing.id));
+  document.getElementById('i-substance')?.addEventListener('input', ()=>autofillInjectionFromExp(mouseId, existing));
 }
 
 // ── Project modal ─────────────────────────────────────────────────────────
