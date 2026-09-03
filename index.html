@@ -1187,6 +1187,7 @@ function modalAddMouse() {
     <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-save-mouse">Save mouse</button></div>
   </div>`);
   document.getElementById('btn-save-mouse').addEventListener('click', doAddMouse);
+  wireAgeAutoCalc();
 }
 
 // ── Edit mouse modal ──────────────────────────────────────────────────────
@@ -1215,6 +1216,7 @@ function modalEditMouse(mouse) {
     <div class="modal-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-save-edit-mouse">Save changes</button></div>
   </div>`);
   document.getElementById('btn-save-edit-mouse').addEventListener('click', ()=>doEditMouse(mouse.id));
+  wireAgeAutoCalc(mouse.takedownAge);
 }
 
 // ── Tissue / organ modal (add or edit) ─────────────────────────────────────
@@ -1398,7 +1400,7 @@ async function doAddBatch(presetTissueId) {
 }
 
 // ── Unified tissue/batch checklist modal ──────────────────────────────────
-const DEFAULT_ORGANS = ['SI','Liver','Col','GF'];
+const DEFAULT_ORGANS = ['SI','Liver','Col','Pancreas','Liv/Pan'];
 
 function buildTissueBatchRows(mouseId) {
   const existing = S.data.tissues.filter(t=>t.mouseId===mouseId)
@@ -1672,6 +1674,31 @@ function modalEditProject(proj) {
 // ── Mutations ─────────────────────────────────────────────────────────────
 const today = () => new Date().toISOString().split('T')[0];
 const uid   = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+
+function calcTakedownAge(dob, takedownDate) {
+  if (!dob || !takedownDate) return '';
+  const d1 = new Date(dob + 'T00:00:00');
+  const d2 = new Date(takedownDate + 'T00:00:00');
+  if (isNaN(d1) || isNaN(d2)) return '';
+  const days = Math.round((d2 - d1) / 86400000);
+  if (days < 0) return '';
+  return 'P' + days;
+}
+
+function wireAgeAutoCalc(existingAge) {
+  let manual = !!(existingAge && existingAge.trim());
+  const dobEl = document.getElementById('m-dob');
+  const tdEl  = document.getElementById('m-takedown-date');
+  const ageEl = document.getElementById('m-age');
+  function recalc() {
+    if (manual) return;
+    const val = calcTakedownAge(dobEl?.value, tdEl?.value);
+    if (val && ageEl) ageEl.value = val;
+  }
+  ageEl?.addEventListener('input', () => { manual = true; }); // typing = you win, stop auto-overwriting
+  dobEl?.addEventListener('change', recalc);
+  tdEl?.addEventListener('change', recalc);
+}
 
 function fmtDate(d) {
   if (!d) return d;
